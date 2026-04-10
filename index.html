@@ -766,9 +766,6 @@
         }
 
         function renderHomePage() {
-            const undervaluedCount = indexData.filter(i => i.status === 'undervalued').length;
-            const fairCount = indexData.filter(i => i.status === 'fair').length;
-            const overvaluedCount = indexData.filter(i => i.status === 'overvalued').length;
 
             return `
                 <div class="container mx-auto px-4 py-8 max-w-7xl">
@@ -788,24 +785,6 @@
                         </div>
                     </header>
 
-                    <!-- Overview Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                        <div class="bg-gradient-to-br from-green-900/40 to-green-800/30 border border-green-700/50 rounded-2xl p-6 text-center">
-                            <div class="text-4xl font-bold text-green-400 mb-2">${undervaluedCount}</div>
-                            <div class="text-gray-300">低估指数</div>
-                            <div class="text-xs text-gray-500 mt-1">适合买入（2倍定投）</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-yellow-900/40 to-yellow-800/30 border border-yellow-700/50 rounded-2xl p-6 text-center">
-                            <div class="text-4xl font-bold text-yellow-400 mb-2">${fairCount}</div>
-                            <div class="text-gray-300">合理指数</div>
-                            <div class="text-xs text-gray-500 mt-1">适合持有（正常定投）</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-red-900/40 to-red-800/30 border border-red-700/50 rounded-2xl p-6 text-center">
-                            <div class="text-4xl font-bold text-red-400 mb-2">${overvaluedCount}</div>
-                            <div class="text-gray-300">高估指数</div>
-                            <div class="text-xs text-gray-500 mt-1">考虑减仓（0.5倍定投）</div>
-                        </div>
-                    </div>
 
                     <!-- Index Cards Grid -->
                     <h2 class="text-2xl font-bold mb-6">指数列表（${indexData.length}个）</h2>
