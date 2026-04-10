@@ -788,7 +788,7 @@
 
                     <!-- Index Cards Grid -->
                     <h2 class="text-2xl font-bold mb-6">指数列表（${indexData.length}个）</h2>
-                    <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         ${[...indexData].sort((a, b) => {
                             const statusOrder = { undervalued: 0, fair: 1, overvalued: 2 };
                             const statusDiff = statusOrder[a.status] - statusOrder[b.status];
@@ -799,37 +799,33 @@
                             const statusConfig = getStatusConfig(index.status);
                             return `
                                 <div onclick="showDetail('${index.id}')"
-                                     class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 cursor-pointer card-hover transition-all duration-300 hover:bg-slate-700/60 ${statusConfig.class}">
-                                    <div class="flex items-center gap-6">
-                                        <!-- 左侧：文字信息 -->
-                                        <div class="flex-shrink-0 w-48">
-                                            <div class="flex items-center gap-3 mb-3">
-                                                <div class="text-2xl">${statusConfig.emoji}</div>
-                                                <div>
-                                                    <h3 class="text-base font-bold text-white">${index.name}</h3>
-                                                    <div class="text-xs text-gray-400">${index.code}</div>
-                                                </div>
-                                            </div>
-                                            <div class="text-xs font-medium mb-2" style="color: ${statusConfig.color}">${statusConfig.text}</div>
-                                            <div class="space-y-1 text-sm">
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-400">PE:</span>
-                                                    <span class="text-white font-medium">${index.currentPE}</span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-400">PE分位:</span>
-                                                    <span class="text-white font-medium">${index.pePercentile}%</span>
-                                                </div>
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-400">ROE:</span>
-                                                    <span class="text-white font-medium">${(index.roe * 100).toFixed(1)}%</span>
-                                                </div>
-                                            </div>
+                                     class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 cursor-pointer card-hover transition-all duration-300 ${statusConfig.class}">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h3 class="text-base font-bold text-white mb-1">${index.name}</h3>
+                                            <div class="text-xs text-gray-400">${index.code}</div>
                                         </div>
-                                        <!-- 右侧：迷你图表 -->
-                                        <div class="w-1/2 min-w-0 h-[100px] bg-slate-900/50 rounded-lg p-2">
-                                            <canvas id="chart-${index.id}"></canvas>
+                                        <div class="text-right">
+                                            <div class="text-xl">${statusConfig.emoji}</div>
+                                            <div class="text-xs font-medium" style="color: ${statusConfig.color}">${statusConfig.text}</div>
                                         </div>
+                                    </div>
+                                    <div class="space-y-1.5 text-xs mb-3">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">PE:</span>
+                                            <span class="text-white font-medium">${index.currentPE}</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">PE分位:</span>
+                                            <span class="text-white font-medium">${index.pePercentile}%</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-400">ROE:</span>
+                                            <span class="text-white font-medium">${(index.roe * 100).toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="h-[120px] bg-slate-900/50 rounded-lg p-2">
+                                        <canvas id="chart-${index.id}"></canvas>
                                     </div>
                                 </div>
                             `;
