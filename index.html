@@ -827,7 +827,7 @@
                                             </div>
                                         </div>
                                         <!-- 右侧：迷你图表 -->
-                                        <div class="flex-1 min-w-0 h-[100px] bg-slate-900/50 rounded-lg p-2">
+                                        <div class="w-1/2 min-w-0 h-[100px] bg-slate-900/50 rounded-lg p-2">
                                             <canvas id="chart-${index.id}"></canvas>
                                         </div>
                                     </div>
@@ -1092,35 +1092,23 @@
                 const statusConfig = getStatusConfig(index.status);
                 const color = statusConfig.color;
 
-                // 优先使用真实日度数据，取近3年
+                // 优先使用真实日度数据，取近10年
                 let displayPE, displayLabels;
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
-                    // 过滤近3年数据
-                    const threeYearsAgo = new Date();
-                    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-                    const cutoff = threeYearsAgo.toISOString().split('T')[0];
-                    const filteredDates = [];
-                    const filteredValues = [];
-                    for (let i = 0; i < index.realPEHistoryDates.length; i++) {
-                        if (index.realPEHistoryDates[i] >= cutoff) {
-                            filteredDates.push(index.realPEHistoryDates[i]);
-                            filteredValues.push(index.realPEHistory[i]);
-                        }
-                    }
-                    // 降采样为6个点
+                    // 使用真实日度数据降采样为10个点
                     const sampled = sampleDailyToRepresentativePoints(
-                        filteredDates.length > 0 ? filteredDates : index.realPEHistoryDates,
-                        filteredValues.length > 0 ? filteredValues : index.realPEHistory,
-                        6
+                        index.realPEHistoryDates,
+                        index.realPEHistory,
+                        10
                     );
                     displayPE = sampled.sampledValues;
                     displayLabels = sampled.sampledYears;
                 } else {
-                    // 回退到硬编码的年度数据（近3年）
+                    // 回退到硬编码的年度数据（近10年）
                     displayPE = index.historicalPE;
                     const currentYear = new Date().getFullYear();
                     displayLabels = [];
-                    for (let i = 2; i >= 0; i--) {
+                    for (let i = 9; i >= 0; i--) {
                         displayLabels.push(currentYear - i);
                     }
                 }
