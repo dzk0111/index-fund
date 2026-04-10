@@ -30,8 +30,9 @@ jobs:
         
     - name: Install dependencies
       run: |
-        pip install akshare pandas
-        
+       pip install akshare==1.18.43 pandas requests --quiet
+       python -c "import akshare; print(f'akshare version: {akshare.__version__}')"
+
     - name: Fetch PE data
       run: python fetch_pe_data.py
       
