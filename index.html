@@ -1092,24 +1092,35 @@
                 const statusConfig = getStatusConfig(index.status);
                 const color = statusConfig.color;
 
-                // 优先使用真实日度数据进行降采样
+                // 优先使用真实日度数据，取近3年
                 let displayPE, displayLabels;
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
-                    // 使用真实日度数据降采样为10个点
+                    // 过滤近3年数据
+                    const threeYearsAgo = new Date();
+                    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+                    const cutoff = threeYearsAgo.toISOString().split('T')[0];
+                    const filteredDates = [];
+                    const filteredValues = [];
+                    for (let i = 0; i < index.realPEHistoryDates.length; i++) {
+                        if (index.realPEHistoryDates[i] >= cutoff) {
+                            filteredDates.push(index.realPEHistoryDates[i]);
+                            filteredValues.push(index.realPEHistory[i]);
+                        }
+                    }
+                    // 降采样为6个点
                     const sampled = sampleDailyToRepresentativePoints(
-                        index.realPEHistoryDates,
-                        index.realPEHistory,
-                        10
+                        filteredDates.length > 0 ? filteredDates : index.realPEHistoryDates,
+                        filteredValues.length > 0 ? filteredValues : index.realPEHistory,
+                        6
                     );
                     displayPE = sampled.sampledValues;
                     displayLabels = sampled.sampledYears;
                 } else {
-                    // 回退到硬编码的年度数据
+                    // 回退到硬编码的年度数据（近3年）
                     displayPE = index.historicalPE;
-                    // 生成近10年的年份标签
                     const currentYear = new Date().getFullYear();
                     displayLabels = [];
-                    for (let i = 9; i >= 0; i--) {
+                    for (let i = 2; i >= 0; i--) {
                         displayLabels.push(currentYear - i);
                     }
                 }
