@@ -1088,17 +1088,40 @@
                 const statusConfig = getStatusConfig(index.status);
                 const color = statusConfig.color;
 
-                // 优先使用真实日度数据，取近10年
+                // 优先使用真实日度数据，按年份均匀采样近10年
                 let displayPE, displayLabels;
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
-                    // 使用真实日度数据降采样为10个点
-                    const sampled = sampleDailyToRepresentativePoints(
-                        index.realPEHistoryDates,
-                        index.realPEHistory,
-                        10
-                    );
-                    displayPE = sampled.sampledValues;
-                    displayLabels = sampled.sampledYears;
+                    const allDates = index.realPEHistoryDates;
+                    const allValues = index.realPEHistory;
+                    const currentYear = new Date().getFullYear();
+                    const startYear = currentYear - 9; // 近10年
+                    const sampledPE = [];
+                    const sampledYears = [];
+                    
+                    for (let y = startYear; y <= currentYear; y++) {
+                        // 找该年度所有数据
+                        const yearStart = y + '-01-01';
+                        const yearEnd = y + '-12-31';
+                        const yearValues = [];
+                        for (let j = 0; j < allDates.length; j++) {
+                            if (allDates[j] >= yearStart && allDates[j] <= yearEnd) {
+                                yearValues.push(allValues[j]);
+                            }
+                        }
+                        // 取该年度PE的中位数作为代表值（更稳定）
+                        if (yearValues.length > 0) {
+                            yearValues.sort((a, b) => a - b);
+                            const mid = Math.floor(yearValues.length / 2);
+                            sampledPE.push(yearValues.length % 2 === 0 
+                                ? (yearValues[mid - 1] + yearValues[mid]) / 2 
+                                : yearValues[mid]);
+                        } else {
+                            sampledPE.push(null);
+                        }
+                        sampledYears.push(String(y));
+                    }
+                    displayPE = sampledPE;
+                    displayLabels = sampledYears;
                 } else {
                     // 回退到硬编码的年度数据（近10年）
                     displayPE = index.historicalPE;
