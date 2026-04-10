@@ -57,6 +57,61 @@
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
+        
+        /* 可折叠面板动画 */
+        .panel-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+        }
+        .panel-content.expanded {
+            max-height: 800px;
+        }
+        .panel-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .panel-toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+        
+        /* 质量等级徽章 */
+        .quality-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .quality-excellent { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .quality-good { background: rgba(59,130,246,0.15); color: #3b82f6; border: 1px solid rgba(59,130,246,0.3); }
+        .quality-medium { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .quality-poor { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        
+        /* 更新状态脉冲动画 */
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+        }
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+        }
+        @keyframes pulse-yellow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+        }
+        .pulse-success { animation: pulse-green 2s infinite; }
+        .pulse-failed { animation: pulse-red 2s infinite; }
+        .pulse-warning { animation: pulse-yellow 2s infinite; }
+        
+        /* 月度质量柱状图 */
+        .monthly-bar {
+            transition: height 0.3s ease;
+            min-width: 8px;
+            border-radius: 3px 3px 0 0;
+        }
     </style>
 </head>
 <body class="text-gray-100">
@@ -135,33 +190,365 @@
             }
         }
 
+        // 数据平滑函数 - 使用移动平均减少锯齿
+        function smoothData(data, windowSize) {
+            if (!data || data.length < windowSize) return data;
+            
+            const smoothed = [];
+            for (let i = 0; i < data.length; i++) {
+                let sum = 0;
+                let count = 0;
+                
+                // 计算窗口内的平均值
+                for (let j = -windowSize; j <= windowSize; j++) {
+                    const idx = i + j;
+                    if (idx >= 0 && idx < data.length) {
+                        sum += data[idx];
+                        count++;
+                    }
+                }
+                
+                smoothed.push(sum / count);
+            }
+            
+            return smoothed;
+        }
+
+        // 将日度数据降采样为指定数量的代表点（用于迷你图）
+        function sampleDailyToRepresentativePoints(dates, values, numPoints) {
+            if (!dates || !values || dates.length === 0 || numPoints <= 0) {
+                return { sampledDates: [], sampledValues: [], sampledYears: [] };
+            }
+
+            const totalPoints = dates.length;
+
+            // 如果数据点数量已经小于等于目标数量，直接返回原始数据
+            if (totalPoints <= numPoints) {
+                const years = dates.map(d => d.substring(0, 4));
+                return {
+                    sampledDates: [...dates],
+                    sampledValues: [...values],
+                    sampledYears: years
+                };
+            }
+
+            const sampledDates = [];
+            const sampledValues = [];
+            const sampledYears = [];
+            const chunkSize = Math.floor(totalPoints / numPoints);
+
+            for (let i = 0; i < numPoints; i++) {
+                const startIdx = i * chunkSize;
+                // 最后一个区间包含剩余所有数据点
+                const endIdx = (i === numPoints - 1) ? totalPoints : (i + 1) * chunkSize;
+
+                // 提取该区间的值
+                const chunkValues = values.slice(startIdx, endIdx);
+
+                // 使用该区间的最大值作为代表值（确保捕捉到历史高点）
+                const maxValue = Math.max(...chunkValues);
+
+                // 使用最大值对应的日期作为代表日期
+                const maxValueIdxInChunk = chunkValues.indexOf(maxValue);
+                const representativeDate = dates[startIdx + maxValueIdxInChunk];
+
+                sampledDates.push(representativeDate);
+                sampledValues.push(maxValue);
+                sampledYears.push(representativeDate.substring(0, 4));
+            }
+
+            return { sampledDates, sampledValues, sampledYears };
+        }
+
         // 加载真实的PE历史数据（从外部JSON文件）
         // JSON格式：{ id: { name, dates[], pe_values[], is_real_data, data_source, latest_pe, latest_date } }
         let realPEHistoryData = null;
+        let dataQualityReport = null; // 数据质量报告
+        
+        // 加载数据质量报告
+        async function loadDataQualityReport() {
+            try {
+                const response = await fetch('data_quality_report.json');
+                dataQualityReport = await response.json();
+                console.log('数据质量报告加载成功，共', dataQualityReport.total_indices, '个指数');
+                return true;
+            } catch (error) {
+                console.log('未找到数据质量报告文件:', error.message);
+                // 如果报告不存在，尝试从现有数据实时计算
+                dataQualityReport = generateQualityReportFromData();
+                return false;
+            }
+        }
+        
+        // 从现有数据实时计算质量报告（备用方案）
+        function generateQualityReportFromData() {
+            const report = {
+                generated_at: new Date().toLocaleString('zh-CN'),
+                data_file: 'index_pe_history.json',
+                total_indices: 0,
+                indices: {}
+            };
+            
+            if (!realPEHistoryData) return report;
+            
+            Object.keys(realPEHistoryData).forEach(indexId => {
+                const data = realPEHistoryData[indexId];
+                if (!data || !data.dates || !data.pe_values) return;
+                
+                const dates = data.dates;
+                const pe_values = data.pe_values;
+                const totalDays = dates.length;
+                
+                // 统计周末数据
+                let weekendCount = 0;
+                for (let i = 0; i < dates.length; i++) {
+                    const d = new Date(dates[i]);
+                    if (d.getDay() === 0 || d.getDay() === 6) weekendCount++;
+                }
+                const weekendRatio = weekendCount / totalDays;
+                
+                // 统计PE零变化
+                let zeroChangeDays = 0;
+                let maxStreak = 0, curStreak = 0;
+                for (let i = 1; i < pe_values.length; i++) {
+                    if (Math.abs(pe_values[i] - pe_values[i-1]) < 0.001) {
+                        zeroChangeDays++;
+                        curStreak++;
+                        maxStreak = Math.max(maxStreak, curStreak);
+                    } else {
+                        curStreak = 0;
+                    }
+                }
+                const samePeRatio = zeroChangeDays / (totalDays - 1);
+                
+                // 计算评分
+                const score = Math.max(0, Math.min(100, 100 - (samePeRatio * 0.6 + weekendRatio * 0.4) * 10));
+                const grade = score >= 85 ? '优' : score >= 70 ? '良' : score >= 50 ? '中' : '差';
+                const color = score >= 85 ? '#10b981' : score >= 70 ? '#3b82f6' : score >= 50 ? '#f59e0b' : '#ef4444';
+                
+                report.indices[indexId] = {
+                    id: indexId,
+                    name: data.name || indexId,
+                    data_source: data.data_source,
+                    total_data_points: totalDays,
+                    date_range_start: dates[0],
+                    date_range_end: dates[dates.length - 1],
+                    weekend_data_points: weekendCount,
+                    weekend_ratio: parseFloat((weekendRatio * 100).toFixed(1)),
+                    same_pe_days: zeroChangeDays,
+                    same_pe_ratio: parseFloat((samePeRatio * 100).toFixed(1)),
+                    max_same_pe_streak: maxStreak,
+                    quality_score: parseFloat(score.toFixed(1)),
+                    quality_grade: grade,
+                    quality_color: color,
+                    latest_pe: data.latest_pe,
+                    latest_date: data.latest_date,
+                    updated_at: data.updated_at,
+                    quality_details: [],
+                    recommendations: [],
+                    monthly_quality: []
+                };
+                report.total_indices++;
+            });
+            
+            return report;
+        }
+        
+        // 智能数据质量检测和过滤函数 - 应用于所有指数
+        function filterTradingDays(dates, values, indexId = '') {
+            if (!dates || !values || dates.length !== values.length) {
+                return { filteredDates: dates || [], filteredValues: values || [] };
+            }
+            
+            console.log(`  处理${indexId ? ' ' + indexId + ' ' : ''}数据：${dates.length} 条原始记录`);
+            
+            // 1. 分析数据模式：检查是否包含大量周末数据
+            let weekendCount = 0;
+            let weekdayDates = [];
+            let weekdayValues = [];
+            
+            // 分析前500条数据（或全部数据如果少于500条）
+            const sampleSize = Math.min(500, dates.length);
+            for (let i = 0; i < sampleSize; i++) {
+                const date = new Date(dates[i]);
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    weekendCount++;
+                } else {
+                    weekdayDates.push(dates[i]);
+                    weekdayValues.push(values[i]);
+                }
+            }
+            
+            const weekendPercent = weekendCount / sampleSize * 100;
+            console.log(`  数据质量检测：前${sampleSize}条中 ${weekendCount} 个周末 (${weekendPercent.toFixed(1)}%)`);
+            
+            // 2. 检测插值模式：连续相同PE值
+            let sameValueSegments = 0;
+            if (weekdayValues.length >= 10) {
+                for (let i = 0; i < weekdayValues.length - 5; i++) {
+                    const value1 = weekdayValues[i];
+                    let allSame = true;
+                    
+                    for (let j = 1; j < 5; j++) {
+                        if (Math.abs(weekdayValues[i+j] - value1) > 0.01) {
+                            allSame = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allSame) {
+                        sameValueSegments++;
+                    }
+                }
+            }
+            
+            console.log(`  插值模式检测：发现 ${sameValueSegments} 个连续相同PE值段`);
+            
+            // 3. 决策：根据数据质量选择不同策略
+            let filteredDates = [];
+            let filteredValues = [];
+            let strategy = 'normal';
+            let qualityLevel = 'good';
+            
+            if (weekendPercent > 40 || sameValueSegments > 5) {
+                // 严重插值数据：降频到周频
+                console.log(`  ⚠️  检测到严重插值数据，启用周频降频`);
+                strategy = 'weekly';
+                qualityLevel = 'severe_interpolation';
+                
+                // 提取每周五的数据
+                for (let i = 0; i < dates.length; i++) {
+                    const date = new Date(dates[i]);
+                    if (date.getDay() === 5) { // 周五
+                        filteredDates.push(dates[i]);
+                        filteredValues.push(values[i]);
+                    }
+                }
+                
+                // 如果周五数据太少，尝试每周随机选一天
+                if (filteredDates.length < dates.length * 0.05) {
+                    console.log(`  周频数据过少，改为随机抽样`);
+                    strategy = 'sampled';
+                    
+                    filteredDates = [];
+                    filteredValues = [];
+                    
+                    // 每周取一个数据点
+                    for (let i = 0; i < dates.length; i += 7) {
+                        if (i < dates.length) {
+                            filteredDates.push(dates[i]);
+                            filteredValues.push(values[i]);
+                        }
+                    }
+                }
+            } else {
+                // 轻度或没有插值：仍然过滤周末数据（用户需求）
+                if (weekendPercent > 20) {
+                    console.log(`  ⚠️  检测到中度插值数据，过滤周末`);
+                    qualityLevel = 'moderate_interpolation';
+                } else {
+                    console.log(`  ✅ 数据质量良好，自动过滤周末数据`);
+                    qualityLevel = 'good';
+                }
+                strategy = 'filtered';
+                
+                for (let i = 0; i < dates.length; i++) {
+                    const date = new Date(dates[i]);
+                    if (date.getDay() >= 1 && date.getDay() <= 5) {
+                        filteredDates.push(dates[i]);
+                        filteredValues.push(values[i]);
+                    }
+                }
+            }
+            
+            console.log(`  最终策略：${strategy}，数据点：${filteredDates.length} 条`);
+            
+            return {
+                filteredDates,
+                filteredValues,
+                strategy,
+                qualityLevel,
+                weekendPercent: weekendPercent.toFixed(1),
+                sameValueSegments
+            };
+        }
+        
         async function loadRealPEHistory() {
             try {
                 const response = await fetch('index_pe_history.json');
                 realPEHistoryData = await response.json();
                 console.log('PE历史数据加载成功，共', Object.keys(realPEHistoryData).length, '个指数');
 
-                // 更新每个指数的历史数据
+                // 更新每个指数的历史数据，并对所有指数应用数据质量检测
                 indexData.forEach(index => {
-                    // cyb（创业板）在JSON中存的是月频数据，改用日频的 cyb50（创业板50）覆盖
-                    // 如果需要区分可在此扩展
                     const realData = realPEHistoryData[index.id];
                     if (realData && realData.pe_values && realData.pe_values.length > 0) {
-                        index.realPEHistory = realData.pe_values;
-                        index.realPEHistoryDates = realData.dates;
-                        index.realDataPoints = realData.pe_values.length;
+                        
+                        console.log(`🔄 处理${index.name}数据：检测到 ${realData.pe_values.length} 条原始记录`);
+                        
+                        // ⚠️ 对所有指数都应用数据质量检测和过滤
+                        const filtered = filterTradingDays(realData.dates, realData.pe_values, index.id);
+                        const displayDates = filtered.filteredDates;
+                        const displayValues = filtered.filteredValues;
+                        const dataPoints = filtered.filteredValues.length;
+                        
+                        // 保存数据质量信息
+                        index.filterStrategy = filtered.strategy;
+                        index.dataQualityInfo = `周末比例: ${filtered.weekendPercent}%，插值段: ${filtered.sameValueSegments}`;
+                        index.dataQualityLevel = filtered.qualityLevel;
+                        
+                        // 重新计算最新PE（使用过滤后的最后一个数据点）
+                        if (filtered.filteredValues.length > 0) {
+                            const latestPE = filtered.filteredValues[filtered.filteredValues.length - 1];
+                            const latestDate = filtered.filteredDates[filtered.filteredDates.length - 1];
+                            console.log(`  ${index.name}：使用${filtered.strategy === 'original' ? '原始' : '过滤后'}数据，最新PE=${latestPE.toFixed(2)} (${latestDate})`);
+                            
+                            // 调试：显示数据质量信息
+                            console.log(`    策略：${filtered.strategy}，质量等级：${filtered.qualityLevel}`);
+                            console.log(`    前5个日期: ${filtered.filteredDates.slice(0, 5).join(', ')}`);
+                            
+                            // 检查是否有周末数据
+                            let weekendCount = 0;
+                            for (let j = 0; j < Math.min(filtered.filteredDates.length, 50); j++) {
+                                const d = new Date(filtered.filteredDates[j]);
+                                if (d.getDay() === 0 || d.getDay() === 6) {
+                                    weekendCount++;
+                                }
+                            }
+                            if (weekendCount > 0 && filtered.strategy !== 'original') {
+                                console.log(`    ⚠️ 警告：过滤后数据中仍有 ${weekendCount} 个周末数据点`);
+                            }
+                        }
+                        
+                        index.realPEHistory = displayValues;
+                        index.realPEHistoryDates = displayDates;
+                        index.realDataPoints = dataPoints;
                         index.isRealData = realData.is_real_data !== false; // 默认视为真实
-                        index.dataSourceReal = realData.data_source || '乐咕乐股';
-                        index.latestPEFromJson = realData.latest_pe;
-                        index.latestDateFromJson = realData.latest_date;
-                        console.log(`${index.name}: ${realData.pe_values.length} 条 [${index.isRealData ? '真实' : '插值'}] ${realData.data_source || ''}`);
+                        index.dataSourceReal = realData.data_source || '中证指数官网';
+                        
+                        // 使用过滤后的最新值
+                        if (displayValues.length > 0) {
+                            index.latestPEFromJson = displayValues[displayValues.length - 1];
+                            index.latestDateFromJson = displayDates[displayDates.length - 1];
+                        } else {
+                            index.latestPEFromJson = realData.latest_pe;
+                            index.latestDateFromJson = realData.latest_date;
+                        }
+                        
+                        // ✅ 关键更新：用JSON中的最新PE覆盖初始值
+                        if (index.latestPEFromJson && index.latestPEFromJson > 0) {
+                            index.currentPE = index.latestPEFromJson;
+                        }
+                        
+                        console.log(`${index.name}: ${dataPoints} 条 [${index.isRealData ? '真实' : '插值'}] ${filtered.strategy !== 'original' ? `(策略: ${filtered.strategy})` : ''}`);
                     } else {
                         console.log(`${index.name}: 无JSON数据，将用插值生成`);
                     }
                 });
+                
+                // ✅ 重新计算所有指数的预测数据（因为PE值已更新）
+                indexData.forEach(updatePredictions);
+                console.log('预测数据已重新计算（基于最新的PE值）');
 
                 return true;
             } catch (error) {
@@ -338,7 +725,7 @@
         ];
 
         // 为每个指数计算预测数据（使用等雨来策略）
-        indexData.forEach(index => {
+        function updatePredictions(index) {
             index.predictions = {
                 undervalued: {
                     1: calculateDengyulaiReturn(index.currentPE, index.targetPE.undervalued, index.roe, index.dividendRate, 1),
@@ -359,7 +746,10 @@
                     10: calculateDengyulaiReturn(index.currentPE, index.targetPE.overvalued, index.roe, index.dividendRate, 10)
                 }
             };
-        });
+        }
+        
+        // 初始化所有指数的预测数据
+        indexData.forEach(updatePredictions);
 
         // 渲染首页
         function renderHomePage() {
@@ -378,7 +768,11 @@
                         <div class="text-sm text-gray-500">
                             📅 数据更新日期：${new Date().toLocaleDateString('zh-CN')} | 数据来源：中证指数官网（csindex.com.cn）全部真实日度PE
                         </div>
-                        <div class="mt-4">
+                        <div class="mt-4 flex items-center justify-center gap-4">
+                            <button onclick="showQualityReport()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
+                                📊 数据质量报告
+                            </button>
+                            <span class="text-gray-600">|</span>
                             <button onclick="showUpdateTool()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                                 ⚙️ 数据更新工具
                             </button>
@@ -679,7 +1073,8 @@
                             <li>• <strong>等雨来策略</strong>：根据ROE、分红率、PE值计算市值变化，得出年化收益率</li>
                             <li>• <strong>市值计算</strong>：市值 = PE × (净资产 × ROE)，净资产通过保留收益（ROE×留存率）复利增长</li>
                             <li>• <strong>年化收益率</strong>：(期末市值/初始市值)^(1/年数) - 1</li>
-                            <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证医疗、中证白酒），与雪球估值数据来源一致</li>
+                            <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证医疗、中证白酒），与雪球估值数据来源一致。</li>
+                            <li>• <strong>数据质量说明</strong>：中证白酒等部分行业指数原始数据包含插值点，系统已自动检测并应用相应处理（过滤周末/降频显示/平滑曲线），以提供更真实的估值走势参考。</li>
                             <li>• <strong>PE分位数</strong>：基于各指数全量历史日度数据计算（沪深300等主要指数从2011年起），分位线在切换近3/5/10年时保持不变，代表绝对历史水平</li>
                             <li>• <strong>收益预测场景</strong>：乐观 = PE回到历史70%分位（高估区间）；中性 = PE保持当前水平；悲观 = PE回到历史30%分位（低估区间）</li>
                             <li>• <strong>ROE / 股息率</strong>：参考中证指数官网及蛋卷基金数据，每周更新一次</li>
@@ -791,13 +1186,6 @@
 
         // 初始化每个指数卡片的迷你PE历史曲线图
         function initMiniCharts() {
-            // 生成近10年的年份标签
-            const currentYear = new Date().getFullYear();
-            const years = [];
-            for (let i = 9; i >= 0; i--) {
-                years.push(currentYear - i);
-            }
-
             indexData.forEach(index => {
                 const ctx = document.getElementById(`chart-${index.id}`);
                 if (!ctx) return;
@@ -805,24 +1193,49 @@
                 const statusConfig = getStatusConfig(index.status);
                 const color = statusConfig.color;
 
-                // 计算PE分位值
+                // 优先使用真实日度数据进行降采样
+                let displayPE, displayLabels;
+                if (index.realPEHistory && index.realPEHistory.length > 0) {
+                    // 使用真实日度数据降采样为10个点
+                    const sampled = sampleDailyToRepresentativePoints(
+                        index.realPEHistoryDates,
+                        index.realPEHistory,
+                        10
+                    );
+                    displayPE = sampled.sampledValues;
+                    displayLabels = sampled.sampledYears;
+                } else {
+                    // 回退到硬编码的年度数据
+                    displayPE = index.historicalPE;
+                    // 生成近10年的年份标签
+                    const currentYear = new Date().getFullYear();
+                    displayLabels = [];
+                    for (let i = 9; i >= 0; i--) {
+                        displayLabels.push(currentYear - i);
+                    }
+                }
+
+                // 计算PE分位值（基于真实完整数据）
                 function calculatePercentile(data, percentile) {
                     const sorted = [...data].sort((a, b) => a - b);
-                    const index = Math.floor(data.length * percentile / 100);
-                    return sorted[index];
+                    const idx = Math.floor(data.length * percentile / 100);
+                    return sorted[idx];
                 }
-                const pe30 = calculatePercentile(index.historicalPE, 30);
-                const pe50 = calculatePercentile(index.historicalPE, 50);
-                const pe70 = calculatePercentile(index.historicalPE, 70);
+                // 优先使用真实完整历史数据计算分位数
+                const fullData = (index.realPEHistory && index.realPEHistory.length > 0)
+                    ? index.realPEHistory : displayPE;
+                const pe30 = calculatePercentile(fullData, 30);
+                const pe50 = calculatePercentile(fullData, 50);
+                const pe70 = calculatePercentile(fullData, 70);
 
                 new Chart(ctx.getContext('2d'), {
                     type: 'line',
                     data: {
-                        labels: years,
+                        labels: displayLabels,
                         datasets: [
                             {
                                 label: 'PE历史',
-                                data: index.historicalPE,
+                                data: displayPE,
                                 borderColor: color,
                                 backgroundColor: 'transparent',
                                 fill: false,
@@ -836,7 +1249,7 @@
                             },
                             {
                                 label: '中位值',
-                                data: Array(years.length).fill(pe50),
+                                data: Array(displayLabels.length).fill(pe50),
                                 borderColor: '#8b5cf6',
                                 borderDash: [3, 3],
                                 pointRadius: 0,
@@ -846,7 +1259,7 @@
                             },
                             {
                                 label: '30%分位',
-                                data: Array(years.length).fill(pe30),
+                                data: Array(displayLabels.length).fill(pe30),
                                 borderColor: '#22c55e',
                                 borderDash: [3, 3],
                                 pointRadius: 0,
@@ -856,7 +1269,7 @@
                             },
                             {
                                 label: '70%分位',
-                                data: Array(years.length).fill(pe70),
+                                data: Array(displayLabels.length).fill(pe70),
                                 borderColor: '#ef4444',
                                 borderDash: [3, 3],
                                 pointRadius: 0,
@@ -961,6 +1374,395 @@
 
         function showUpdateTool() {
             document.getElementById('app').innerHTML = renderUpdateToolPage();
+        }
+        
+        // 可折叠面板状态
+        let panelStates = {};
+        
+        function togglePanel(indexId) {
+            panelStates[indexId] = !panelStates[indexId];
+            const content = document.getElementById(`panel-content-${indexId}`);
+            const icon = document.getElementById(`panel-icon-${indexId}`);
+            if (content) {
+                content.classList.toggle('expanded');
+            }
+            if (icon) {
+                icon.classList.toggle('rotated');
+            }
+        }
+        
+        function expandAllPanels() {
+            if (!dataQualityReport) return;
+            Object.keys(dataQualityReport.indices).forEach(id => {
+                panelStates[id] = true;
+                const content = document.getElementById(`panel-content-${id}`);
+                const icon = document.getElementById(`panel-icon-${id}`);
+                if (content) content.classList.add('expanded');
+                if (icon) icon.classList.add('rotated');
+            });
+        }
+        
+        function collapseAllPanels() {
+            Object.keys(panelStates).forEach(id => {
+                panelStates[id] = false;
+                const content = document.getElementById(`panel-content-${id}`);
+                const icon = document.getElementById(`panel-icon-${id}`);
+                if (content) content.classList.remove('expanded');
+                if (icon) icon.classList.remove('rotated');
+            });
+        }
+        
+        // 渲染数据质量报告页面
+        function renderQualityReportPage() {
+            if (!dataQualityReport || dataQualityReport.total_indices === 0) {
+                return `
+                    <div class="container mx-auto px-4 py-8 max-w-6xl">
+                        <header class="mb-8">
+                            <button onclick="showHomePage()" class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                                </svg>
+                                返回首页
+                            </button>
+                            <h1 class="text-3xl font-bold gradient-text">数据质量报告</h1>
+                        </header>
+                        <div class="bg-slate-800/60 border border-slate-700 rounded-2xl p-8 text-center">
+                            <div class="text-gray-400 text-lg mb-4">暂无质量报告数据</div>
+                            <p class="text-gray-500 text-sm">请先运行 <code class="bg-slate-700 px-2 py-1 rounded">python analyze_data_quality.py</code> 生成质量报告</p>
+                            <button onclick="showHomePage()" class="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+                                返回首页
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            const indices = Object.values(dataQualityReport.indices);
+            // 按质量评分排序
+            indices.sort((a, b) => a.quality_score - b.quality_score);
+            
+            const avgScore = (indices.reduce((s, i) => s + i.quality_score, 0) / indices.length).toFixed(1);
+            const gradeCounts = { '优': 0, '良': 0, '中': 0, '差': 0 };
+            indices.forEach(i => gradeCounts[i.quality_grade]++);
+            
+            // 获取最新更新时间
+            const updateTimes = indices.map(i => i.updated_at).filter(t => t && t !== '未知');
+            const latestUpdate = updateTimes.length > 0 ? updateTimes.sort().pop() : '未知';
+            
+            // 数据更新状态
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const isTodayUpdated = latestUpdate && latestUpdate.startsWith(todayStr);
+            const updateStatus = isTodayUpdated ? 'success' : (latestUpdate === '未知' ? 'unknown' : 'warning');
+            
+            const statusConfig = {
+                success: { text: '今日已更新', color: '#10b981', bgClass: 'bg-green-500', pulseClass: 'pulse-success', icon: '✅' },
+                warning: { text: '今日未更新', color: '#f59e0b', bgClass: 'bg-yellow-500', pulseClass: 'pulse-warning', icon: '⚠️' },
+                unknown: { text: '状态未知', color: '#6b7280', bgClass: 'bg-gray-500', pulseClass: '', icon: '❓' }
+            };
+            const uStatus = statusConfig[updateStatus];
+            
+            return `
+                <div class="container mx-auto px-4 py-8 max-w-6xl">
+                    <!-- Header -->
+                    <header class="mb-8">
+                        <button onclick="showHomePage()" class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            返回首页
+                        </button>
+                        <h1 class="text-3xl font-bold gradient-text mb-2">📊 数据质量报告</h1>
+                        <p class="text-gray-400 text-sm">全面分析 ${dataQualityReport.total_indices} 个指数的数据质量</p>
+                    </header>
+                    
+                    <!-- 汇总卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <!-- 平均评分 -->
+                        <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 text-center">
+                            <div class="text-3xl font-bold" style="color: ${avgScore >= 85 ? '#10b981' : avgScore >= 70 ? '#3b82f6' : avgScore >= 50 ? '#f59e0b' : '#ef4444'}">${avgScore}</div>
+                            <div class="text-gray-400 text-sm mt-1">平均质量评分</div>
+                        </div>
+                        <!-- 质量分布 -->
+                        <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5">
+                            <div class="text-gray-400 text-sm mb-3">质量分布</div>
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-green-400">优 (>=85)</span>
+                                    <span class="font-bold text-green-400">${gradeCounts['优']}</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-blue-400">良 (70-84)</span>
+                                    <span class="font-bold text-blue-400">${gradeCounts['良']}</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-yellow-400">中 (50-69)</span>
+                                    <span class="font-bold text-yellow-400">${gradeCounts['中']}</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-red-400">差 (<50)</span>
+                                    <span class="font-bold text-red-400">${gradeCounts['差']}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 更新状态 -->
+                        <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 text-center">
+                            <div class="flex items-center justify-center gap-2 mb-2">
+                                <div class="w-3 h-3 rounded-full ${uStatus.bgClass} ${uStatus.pulseClass}"></div>
+                                <span class="text-sm font-medium" style="color: ${uStatus.color}">${uStatus.text}</span>
+                            </div>
+                            <div class="text-gray-400 text-xs">上次更新</div>
+                            <div class="text-white text-sm font-medium mt-1">${latestUpdate !== '未知' ? latestUpdate.substring(0, 16) : '暂无记录'}</div>
+                        </div>
+                        <!-- 数据总量 -->
+                        <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 text-center">
+                            <div class="text-3xl font-bold text-blue-400">${indices.reduce((s, i) => s + i.total_data_points, 0).toLocaleString()}</div>
+                            <div class="text-gray-400 text-sm mt-1">总数据点</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-white">各指数质量详情</h2>
+                        <div class="flex gap-2">
+                            <button onclick="expandAllPanels()" class="px-4 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg transition-colors">
+                                展开全部
+                            </button>
+                            <button onclick="collapseAllPanels()" class="px-4 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-lg transition-colors">
+                                折叠全部
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 过滤控制栏 -->
+                    <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-xl p-4 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- 质量等级过滤 -->
+                            <div>
+                                <div class="text-sm font-medium text-gray-400 mb-2">质量等级</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" class="quality-filter" value="优" checked onchange="filterPanels()">
+                                        <span class="quality-badge quality-excellent text-xs">优</span>
+                                        <span class="text-xs text-gray-400">(${gradeCounts['优']})</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" class="quality-filter" value="良" checked onchange="filterPanels()">
+                                        <span class="quality-badge quality-good text-xs">良</span>
+                                        <span class="text-xs text-gray-400">(${gradeCounts['良']})</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" class="quality-filter" value="中" checked onchange="filterPanels()">
+                                        <span class="quality-badge quality-medium text-xs">中</span>
+                                        <span class="text-xs text-gray-400">(${gradeCounts['中']})</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" class="quality-filter" value="差" checked onchange="filterPanels()">
+                                        <span class="quality-badge quality-poor text-xs">差</span>
+                                        <span class="text-xs text-gray-400">(${gradeCounts['差']})</span>
+                                    </label>
+                                    <button onclick="toggleAllQualityFilters(true)" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-gray-300 rounded">全选</button>
+                                    <button onclick="toggleAllQualityFilters(false)" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-gray-300 rounded">全不选</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 指数筛选 -->
+                            <div>
+                                <div class="text-sm font-medium text-gray-400 mb-2">指数筛选</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <select id="index-filter" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white w-full max-w-xs" onchange="filterPanels()" multiple>
+                                        <option value="all" selected>全部指数</option>
+                                        ${indices.map(item => `<option value="${item.id}" selected>${item.name}</option>`).join('')}
+                                    </select>
+                                    <div class="text-xs text-gray-500 mt-1">按住Ctrl多选，默认全选</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 时间范围过滤 -->
+                            <div>
+                                <div class="text-sm font-medium text-gray-400 mb-2">时间范围</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="time-filter" value="all" checked onchange="filterPanels()">
+                                        <span class="text-xs text-gray-300">全部历史</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="time-filter" value="1year" onchange="filterPanels()">
+                                        <span class="text-xs text-gray-300">近1年</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="time-filter" value="3year" onchange="filterPanels()">
+                                        <span class="text-xs text-gray-300">近3年</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="time-filter" value="5year" onchange="filterPanels()">
+                                        <span class="text-xs text-gray-300">近5年</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 可折叠面板列表 -->
+                    <div class="space-y-3">
+                        ${indices.map((item, idx) => {
+                            const isExpanded = idx < 3; // 默认展开前3个
+                            panelStates[item.id] = isExpanded;
+                            const gradeClass = item.quality_grade === '优' ? 'quality-excellent' : item.quality_grade === '良' ? 'quality-good' : item.quality_grade === '中' ? 'quality-medium' : 'quality-poor';
+                            const monthData = item.monthly_quality || [];
+                            
+                            return `
+                            <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-xl overflow-hidden transition-all hover:border-slate-600" data-index-id="${item.id}" data-quality-grade="${item.quality_grade}" data-date-start="${item.date_range_start || ''}">
+                                <!-- 面板头部（始终可见） -->
+                                <div onclick="togglePanel('${item.id}')" class="flex items-center justify-between p-4 cursor-pointer select-none">
+                                    <div class="flex items-center gap-4">
+                                        <div class="text-lg font-bold text-white w-24">${item.name}</div>
+                                        <span class="quality-badge ${gradeClass}">${item.quality_grade} ${item.quality_score}分</span>
+                                        <div class="hidden md:flex items-center gap-4 text-xs text-gray-400">
+                                            <span>${item.total_data_points}条</span>
+                                            <span>周末${item.weekend_ratio}%</span>
+                                            ${item.same_pe_ratio > 5 ? `<span style="color:#f59e0b">PE零变${item.same_pe_ratio}%</span>` : ''}
+                                            ${item.max_same_pe_streak > 3 ? `<span style="color:#ef4444">连续${item.max_same_pe_streak}天</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-gray-500 hidden sm:inline">${item.date_range_start || '?'} ~ ${item.date_range_end || '?'}</span>
+                                        <svg id="panel-icon-${item.id}" class="w-5 h-5 text-gray-400 panel-toggle-icon ${isExpanded ? 'rotated' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <!-- 面板内容（可折叠） -->
+                                <div id="panel-content-${item.id}" class="panel-content ${isExpanded ? 'expanded' : ''}">
+                                    <div class="px-4 pb-4 border-t border-slate-700/50">
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                            <div class="bg-slate-700/30 rounded-lg p-3">
+                                                <div class="text-gray-500 text-xs mb-1">数据量</div>
+                                                <div class="text-white font-bold">${item.total_data_points}</div>
+                                                <div class="text-gray-500 text-xs">${item.date_range_start || '?'} ~ ${item.date_range_end || '?'}</div>
+                                            </div>
+                                            <div class="bg-slate-700/30 rounded-lg p-3">
+                                                <div class="text-gray-500 text-xs mb-1">周末数据</div>
+                                                <div class="font-bold" style="color: ${item.weekend_ratio > 20 ? '#f59e0b' : '#10b981'}">${item.weekend_ratio}%</div>
+                                                <div class="text-gray-500 text-xs">${item.weekend_data_points}个周末点</div>
+                                            </div>
+                                            <div class="bg-slate-700/30 rounded-lg p-3">
+                                                <div class="text-gray-500 text-xs mb-1">PE零变化</div>
+                                                <div class="font-bold" style="color: ${item.same_pe_ratio > 20 ? '#ef4444' : item.same_pe_ratio > 10 ? '#f59e0b' : '#10b981'}">${item.same_pe_ratio}%</div>
+                                                <div class="text-gray-500 text-xs">最长连续${item.max_same_pe_streak}天</div>
+                                            </div>
+                                            <div class="bg-slate-700/30 rounded-lg p-3">
+                                                <div class="text-gray-500 text-xs mb-1">最新数据</div>
+                                                <div class="text-white font-bold">${item.latest_pe || 'N/A'}</div>
+                                                <div class="text-gray-500 text-xs">${item.latest_date || '未知'}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 月度质量趋势图 -->
+                                        ${monthData.length > 0 ? `
+                                        <div class="mt-4 bg-slate-700/30 rounded-lg p-3">
+                                            <div class="text-gray-500 text-xs mb-3">近12个月质量趋势</div>
+                                            <div class="flex items-end gap-1.5 h-16">
+                                                ${monthData.map(m => {
+                                                    const barColor = m.quality_grade === '优' ? '#10b981' : m.quality_grade === '良' ? '#3b82f6' : m.quality_grade === '中' ? '#f59e0b' : '#ef4444';
+                                                    const height = Math.max(4, m.quality_score / 100 * 100);
+                                                    return `<div class="flex-1 flex flex-col items-center gap-1">
+                                                        <div class="monthly-bar w-full" style="height:${height}%; background:${barColor};" title="${m.month}: ${m.quality_score}分 (${m.quality_grade})"></div>
+                                                        <div class="text-gray-600" style="font-size:9px;">${m.month.substring(5)}</div>
+                                                    </div>`;
+                                                }).join('')}
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                        
+                                        <!-- 建议列表 -->
+                                        ${(item.recommendations && item.recommendations.length > 0) || (item.quality_details && item.quality_details.length > 0) ? `
+                                        <div class="mt-4 text-xs text-gray-400 space-y-1">
+                                            ${(item.quality_details || []).map(d => `<div>- ${d}</div>`).join('')}
+                                            ${(item.recommendations || []).map(r => `<div class="text-blue-400">→ ${r}</div>`).join('')}
+                                        </div>
+                                        ` : `
+                                        <div class="mt-4 text-xs text-green-400">✅ 数据质量优秀，可直接用于估值参考</div>
+                                        `}
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <!-- 评分算法说明 -->
+                    <div class="mt-8 bg-slate-800/60 backdrop-blur border border-slate-700 rounded-xl p-6">
+                        <h3 class="text-white font-bold mb-3">评分算法说明</h3>
+                        <div class="text-gray-400 text-sm space-y-2">
+                            <p><strong class="text-gray-300">质量评分公式：</strong></p>
+                            <p class="font-mono bg-slate-900/50 p-3 rounded-lg text-xs text-blue-300">质量评分 = 100 - (PE零变化比例 × 0.6 + 周末数据比例 × 0.4) × 10</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+                                <div class="flex items-center gap-2"><span class="quality-badge quality-excellent">优</span><span class="text-gray-500">>= 85分</span></div>
+                                <div class="flex items-center gap-2"><span class="quality-badge quality-good">良</span><span class="text-gray-500">70-84分</span></div>
+                                <div class="flex items-center gap-2"><span class="quality-badge quality-medium">中</span><span class="text-gray-500">50-69分</span></div>
+                                <div class="flex items-center gap-2"><span class="quality-badge quality-poor">差</span><span class="text-gray-500">< 50分</span></div>
+                            </div>
+                            <p class="mt-3"><strong class="text-gray-300">检测维度：</strong>周末数据比例（数据来源为交易日历的周末插值）、PE零变化比例（同一PE值连续出现的天数占比，反映插值程度）</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <footer class="mt-8 text-center text-gray-500 text-sm">
+                        <p>报告生成时间：${dataQualityReport.generated_at}</p>
+                    </footer>
+                </div>
+            `;
+        }
+        
+        function showQualityReport() {
+            document.getElementById('app').innerHTML = renderQualityReportPage();
+        }
+        
+        // 过滤相关函数
+        function toggleAllQualityFilters(checked) {
+            document.querySelectorAll('.quality-filter').forEach(cb => cb.checked = checked);
+            filterPanels();
+        }
+        
+        function filterPanels() {
+            // 获取选中的质量等级
+            const selectedGrades = Array.from(document.querySelectorAll('.quality-filter:checked')).map(cb => cb.value);
+            // 获取选中的指数
+            const indexSelect = document.getElementById('index-filter');
+            const selectedIndices = Array.from(indexSelect.selectedOptions).map(opt => opt.value);
+            // 获取选中的时间范围
+            const timeRange = document.querySelector('input[name="time-filter"]:checked')?.value || 'all';
+            
+            // 遍历所有面板
+            const panels = document.querySelectorAll('[data-index-id]');
+            panels.forEach(panel => {
+                const indexId = panel.dataset.indexId;
+                const grade = panel.dataset.qualityGrade;
+                const dateRangeStart = panel.dataset.dateStart;
+                
+                // 质量等级过滤
+                const gradeMatch = selectedGrades.includes(grade);
+                
+                // 指数筛选
+                const indexMatch = selectedIndices.includes('all') || selectedIndices.includes(indexId);
+                
+                // 时间范围过滤（简化：仅检查是否在近N年内）
+                let timeMatch = true;
+                if (timeRange !== 'all' && dateRangeStart) {
+                    const startDate = new Date(dateRangeStart);
+                    const now = new Date();
+                    let years = 1;
+                    if (timeRange === '3year') years = 3;
+                    if (timeRange === '5year') years = 5;
+                    const cutoffDate = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
+                    timeMatch = startDate >= cutoffDate;
+                }
+                
+                // 显示/隐藏
+                panel.style.display = (gradeMatch && indexMatch && timeMatch) ? '' : 'none';
+            });
         }
 
         function changeHistoryTimeRange(range) {
@@ -1161,9 +1963,51 @@
                 // 优先使用真实PE历史数据
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
                     console.log(`使用 ${index.name} 的真实PE历史数据`);
+                    console.log(`  原始数据点数: ${index.realPEHistory.length}`);
+                    console.log(`  原始日期数: ${index.realPEHistoryDates.length}`);
+                    
+                    // 如果是中证白酒，添加更多调试信息
+                    if (index.id === 'zzbj') {
+                        console.log(`  中证白酒调试：`);
+                        // 检查前20个数据点的连续性
+                        for (let i = 0; i < Math.min(20, index.realPEHistoryDates.length); i++) {
+                            const date = new Date(index.realPEHistoryDates[i]);
+                            const dayOfWeek = date.getDay();
+                            const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dayOfWeek];
+                            console.log(`    ${index.realPEHistoryDates[i]} (${dayName}): PE=${index.realPEHistory[i]?.toFixed(2)}`);
+                        }
+                    }
+                    
                     dailyPE = [...index.realPEHistory];
                     labels = [...index.realPEHistoryDates];
 
+                    // 如果数据质量较差（严重插值），应用平滑处理
+                    let shouldSmooth = false;
+                    if (index.dataQualityLevel === 'severe_interpolation' || 
+                        index.filterStrategy === 'weekly' || 
+                        index.filterStrategy === 'sampled') {
+                        console.log(`  对${index.name}应用图表平滑处理（数据质量：${index.dataQualityLevel}）`);
+                        shouldSmooth = true;
+                        
+                        // 简单的移动平均平滑
+                        const smoothedValues = [];
+                        const windowSize = 3;
+                        
+                        for (let i = 0; i < dailyPE.length; i++) {
+                            let sum = 0;
+                            let count = 0;
+                            
+                            for (let j = Math.max(0, i - windowSize); j <= Math.min(dailyPE.length - 1, i + windowSize); j++) {
+                                sum += dailyPE[j];
+                                count++;
+                            }
+                            
+                            smoothedValues.push(sum / count);
+                        }
+                        
+                        dailyPE = smoothedValues;
+                    }
+                    
                     // 根据时间范围筛选数据（基于日期而不是数据点数）
                     const currentDate = new Date(labels[labels.length - 1]); // 最后一个日期
                     let startDate;
@@ -1183,11 +2027,30 @@
 
                     // 筛选日期大于等于开始日期的数据
                     const startDateStr = startDate.toISOString().split('T')[0];
-                    const startIndex = labels.findIndex(label => label >= startDateStr);
+                    let startIndex = labels.findIndex(label => label >= startDateStr);
+                    
+                    // 对于中证白酒，如果找不到精确匹配，找最接近的日期
+                    if (index.id === 'zzbj' && startIndex === -1) {
+                        console.log(`  中证白酒：找不到 ${startDateStr}，查找最接近的日期`);
+                        // 找到第一个大于开始日期的日期
+                        for (let i = 0; i < labels.length; i++) {
+                            if (labels[i] > startDateStr) {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                        if (startIndex === -1) {
+                            startIndex = labels.length - 1; // 如果都找不到，用最后一个
+                        }
+                    }
 
                     if (startIndex > 0) {
                         dailyPE = dailyPE.slice(startIndex);
                         labels = labels.slice(startIndex);
+                        
+                        if (index.id === 'zzbj') {
+                            console.log(`  中证白酒：从 ${startDateStr} 开始，实际从 ${labels[0]} 开始 (索引 ${startIndex})`);
+                        }
                     }
 
                     console.log(`时间范围: ${labels[0]} 到 ${labels[labels.length - 1]} (${dailyPE.length}个数据点)`);
@@ -1228,15 +2091,44 @@
                 document.getElementById('historyChartTitle').textContent =
                     `📊 历史估值走势（${rangeText}：${dateRange}）`;
 
-                // 更新数据来源标注
-                const noteEl = document.getElementById('chartDataSourceNote');
-                if (noteEl) {
-                    if (index.isRealData) {
-                        noteEl.innerHTML = `<span style="color:#10b981">● 真实数据</span> 来源：${index.dataSourceReal || index.dataSource}，共 ${dailyPE.length} 个数据点`;
-                    } else {
-                        noteEl.innerHTML = `<span style="color:#f59e0b">● 插值数据</span> 来源：${index.dataSourceReal || index.dataSource}（年度锚点线性插值，趋势参考）`;
-                    }
-                }
+                        // 更新数据来源标注，根据数据质量显示不同提示
+                        const noteEl = document.getElementById('chartDataSourceNote');
+                        if (noteEl) {
+                            if (index.isRealData) {
+                                // 根据数据质量等级显示不同的提示
+                                const qualityLevel = index.dataQualityLevel;
+                                const strategy = index.filterStrategy;
+                                
+                                let qualityIcon = '●';
+                                let qualityColor = '#10b981';
+                                let qualityText = '真实数据';
+                                let additionalInfo = '';
+                                
+                                if (qualityLevel === 'severe_interpolation' || strategy === 'weekly' || strategy === 'sampled') {
+                                    qualityIcon = '⚠️';
+                                    qualityColor = '#f59e0b';
+                                    qualityText = '插值数据（已降频显示）';
+                                    additionalInfo = `<span style="color:#ef4444">（原始数据为插值，未做美化处理）</span>`;
+                                } else if (qualityLevel === 'moderate_interpolation') {
+                                    qualityIcon = '⚠️';
+                                    qualityColor = '#f59e0b';
+                                    qualityText = '真实数据（已过滤周末）';
+                                } else if (strategy === 'filtered') {
+                                    qualityIcon = '✅';
+                                    qualityColor = '#10b981';
+                                    qualityText = '真实数据（已过滤周末）';
+                                }
+                                
+                                // 生成官网PE曲线链接（hash路由格式）
+                                const officialUrl = `https://www.csindex.com.cn/#/indices/family/detail?indexCode=${index.code}`;
+                                const officialLink = `<a href="${officialUrl}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;margin-left:6px;font-size:11px;">↗ 中证指数官网</a>`;
+                                noteEl.innerHTML = `<span style="color:${qualityColor}">${qualityIcon} ${qualityText}</span> 来源：${index.dataSourceReal || index.dataSource}，共 ${dailyPE.length} 个数据点 ${additionalInfo}${officialLink}`;
+                            } else {
+                                const officialUrl = `https://www.csindex.com.cn/#/indices/family/detail?indexCode=${index.code}`;
+                                const officialLink = `<a href="${officialUrl}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;margin-left:6px;font-size:11px;">↗ 中证指数官网</a>`;
+                                noteEl.innerHTML = `<span style="color:#f59e0b">● 插值数据</span> 来源：${index.dataSourceReal || index.dataSource}（年度锚点线性插值，趋势参考）${officialLink}`;
+                            }
+                        }
 
                 // 计算PE的分位数
                 // 【重要】基于完整的历史数据计算分位线，而不是筛选后的数据
@@ -1275,7 +2167,7 @@
                             borderColor: '#f97316',
                             backgroundColor: 'transparent',
                             fill: false,
-                            tension: 0.1,
+                            tension: 0.1, // 轻微平滑，保持数据真实性
                             pointRadius: 0,
                             pointHoverRadius: 6,
                             pointHoverBackgroundColor: '#f97316',
@@ -1456,6 +2348,8 @@
         document.addEventListener('DOMContentLoaded', async () => {
             // 尝试加载真实的PE历史数据
             await loadRealPEHistory();
+            // 加载数据质量报告
+            await loadDataQualityReport();
             // 显示首页
             showHomePage();
         });
