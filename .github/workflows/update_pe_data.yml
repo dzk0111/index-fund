@@ -1,1 +1,54 @@
-# test
+name: Update PE Data
+
+on:
+  schedule:
+    # 北京时间 17:30 = UTC 09:30 (工作日)
+    - cron: '30 9 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      update_mode:
+        description: '更新模式'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - full
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        pip install akshare pandas
+        
+    - name: Fetch PE data
+      run: python fetch_pe_data.py
+      
+    - name: Check for changes
+      id: check_changes
+      run: |
+        if git diff --quiet; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit and push if changed
+      if: steps.check_changes.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add index_pe_history.json update_logs.json data_quality_report.json
+        git commit -m "自动更新PE数据 - $(date +'%Y-%m-%d')"
+        git push
