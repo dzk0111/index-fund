@@ -80,7 +80,11 @@ def fetch_index(code, name, start_year, force=False, existing=None, site_id=None
         cl = c.lower()
         if 'date' in cl or '日期' in cl:
             col_map[c] = 'date'
-        elif 'pe' in cl:
+        elif 'pe' in cl or '市盈率' in c:
+            if 'date' not in col_map.values():
+    print(f'  ⚠️ 未找到日期列，当前列名: {list(df.columns)}')
+if 'pe' not in col_map.values():
+    print(f'  ⚠️ 未找到PE列，当前列名: {list(df.columns)}')
             col_map[c] = 'pe'
     df = df.rename(columns=col_map)
 
