@@ -1088,47 +1088,17 @@
                 const statusConfig = getStatusConfig(index.status);
                 const color = statusConfig.color;
 
-                // 优先使用真实日度数据，按年份均匀采样近10年
+                // 使用与详情页相同的完整日度数据（缩小版）
                 let displayPE, displayLabels;
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
-                    const allDates = index.realPEHistoryDates;
-                    const allValues = index.realPEHistory;
-                    const currentYear = new Date().getFullYear();
-                    const startYear = currentYear - 9; // 近10年
-                    const sampledPE = [];
-                    const sampledYears = [];
-                    
-                    for (let y = startYear; y <= currentYear; y++) {
-                        // 找该年度所有数据
-                        const yearStart = y + '-01-01';
-                        const yearEnd = y + '-12-31';
-                        const yearValues = [];
-                        for (let j = 0; j < allDates.length; j++) {
-                            if (allDates[j] >= yearStart && allDates[j] <= yearEnd) {
-                                yearValues.push(allValues[j]);
-                            }
-                        }
-                        // 取该年度PE的中位数作为代表值（更稳定）
-                        if (yearValues.length > 0) {
-                            yearValues.sort((a, b) => a - b);
-                            const mid = Math.floor(yearValues.length / 2);
-                            sampledPE.push(yearValues.length % 2 === 0 
-                                ? (yearValues[mid - 1] + yearValues[mid]) / 2 
-                                : yearValues[mid]);
-                        } else {
-                            sampledPE.push(null);
-                        }
-                        sampledYears.push(String(y));
-                    }
-                    displayPE = sampledPE;
-                    displayLabels = sampledYears;
+                    displayPE = [...index.realPEHistory];
+                    displayLabels = [...index.realPEHistoryDates];
                 } else {
-                    // 回退到硬编码的年度数据（近10年）
                     displayPE = index.historicalPE;
                     const currentYear = new Date().getFullYear();
                     displayLabels = [];
                     for (let i = 9; i >= 0; i--) {
-                        displayLabels.push(currentYear - i);
+                        displayLabels.push(String(currentYear - i));
                     }
                 }
 
@@ -1156,7 +1126,7 @@
                                 borderColor: color,
                                 backgroundColor: 'transparent',
                                 fill: false,
-                                tension: 0.4,
+                                tension: 0.1,
                                 pointRadius: 0,
                                 pointHoverRadius: 4,
                                 pointHoverBackgroundColor: color,
@@ -1165,34 +1135,34 @@
                                 borderWidth: 1.5
                             },
                             {
-                                label: '中位值',
+                                label: 'PE中位值(50%)',
                                 data: Array(displayLabels.length).fill(pe50),
                                 borderColor: '#8b5cf6',
-                                borderDash: [3, 3],
+                                borderDash: [5, 5],
                                 pointRadius: 0,
                                 pointHoverRadius: 0,
                                 fill: false,
-                                borderWidth: 1
+                                borderWidth: 1.5
                             },
                             {
-                                label: '30%分位',
+                                label: 'PE 30%分位',
                                 data: Array(displayLabels.length).fill(pe30),
                                 borderColor: '#22c55e',
-                                borderDash: [3, 3],
+                                borderDash: [5, 5],
                                 pointRadius: 0,
                                 pointHoverRadius: 0,
                                 fill: false,
-                                borderWidth: 1
+                                borderWidth: 1.5
                             },
                             {
-                                label: '70%分位',
+                                label: 'PE 70%分位',
                                 data: Array(displayLabels.length).fill(pe70),
                                 borderColor: '#ef4444',
-                                borderDash: [3, 3],
+                                borderDash: [5, 5],
                                 pointRadius: 0,
                                 pointHoverRadius: 0,
                                 fill: false,
-                                borderWidth: 1
+                                borderWidth: 1.5
                             }
                         ]
                     },
@@ -1215,13 +1185,14 @@
                                 borderColor: '#fbbf24',
                                 borderWidth: 1,
                                 padding: 8,
-                                displayColors: true,
+                                displayColors: false,
                                 titleFont: {
-                                    size: 12,
+                                    size: 11,
                                     weight: 'bold'
                                 },
                                 bodyFont: {
-                                    size: 12
+                                    size: 12,
+                                    weight: 'bold'
                                 },
                                 callbacks: {
                                     title: function(context) {
@@ -1242,9 +1213,13 @@
                                 ticks: {
                                     color: '#6b7280',
                                     font: {
-                                        size: 10
+                                        size: 9
                                     },
-                                    maxTicksLimit: 5
+                                    maxTicksLimit: 5,
+                                    callback: function(value, index, values) {
+                                        const label = this.getLabelForValue(value);
+                                        return label ? label.substring(0, 4) : '';
+                                    }
                                 },
                                 grid: {
                                     display: false
@@ -1255,7 +1230,7 @@
                                 ticks: {
                                     color: '#6b7280',
                                     font: {
-                                        size: 10
+                                        size: 9
                                     },
                                     callback: function(value) {
                                         return value.toFixed(1);
