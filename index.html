@@ -1238,16 +1238,9 @@
                             },
                             tooltip: {
                                 enabled: true,
-                                position: function(context) {
-                                    var chart = context.chart;
-                                    var chartArea = chart.chartArea;
-                                    var x = context[0].caretX;
-                                    if (x > (chartArea.left + chartArea.right) / 2) {
-                                        return { x: x, y: context[0].caretY, xAlign: 'right', yAlign: 'center' };
-                                    } else {
-                                        return { x: x, y: context[0].caretY, xAlign: 'left', yAlign: 'center' };
-                                    }
-                                },
+                                position: 'nearest',
+                                xAlign: 'left',
+                                yAlign: 'center',
                                 backgroundColor: 'rgba(254, 243, 199, 0.95)',
                                 titleColor: '#92400e',
                                 bodyColor: '#d97706',
@@ -2092,17 +2085,9 @@
                             },
                             tooltip: {
                                 enabled: true,
-                                position: function(context) {
-                                    // 鼠标在右半边时，tooltip显示在左边；否则显示在右边
-                                    var chart = context.chart;
-                                    var chartArea = chart.chartArea;
-                                    var x = context[0].caretX;
-                                    if (x > (chartArea.left + chartArea.right) / 2) {
-                                        return { x: x, y: context[0].caretY, xAlign: 'right', yAlign: 'center' };
-                                    } else {
-                                        return { x: x, y: context[0].caretY, xAlign: 'left', yAlign: 'center' };
-                                    }
-                                },
+                                position: 'nearest',
+                                xAlign: 'left',
+                                yAlign: 'center',
                                 backgroundColor: 'rgba(254, 243, 199, 0.95)',
                                 titleColor: '#92400e',
                                 bodyColor: '#d97706',
