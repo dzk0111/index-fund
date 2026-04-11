@@ -112,6 +112,19 @@
             min-width: 8px;
             border-radius: 3px 3px 0 0;
         }
+
+        /* 固定顶部返回栏 */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
     </style>
 </head>
 <body class="text-gray-100">
@@ -920,7 +933,7 @@
             return `
                 <div class="container mx-auto px-4 py-8 max-w-6xl">
                     <!-- Header -->
-                    <header class="mb-8">
+                    <header class="mb-8 sticky-header">
                         <button onclick="showHomePage()" class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -1362,7 +1375,7 @@
             if (!dataQualityReport || dataQualityReport.total_indices === 0) {
                 return `
                     <div class="container mx-auto px-4 py-8 max-w-6xl">
-                        <header class="mb-8">
+                        <header class="mb-8 sticky-header">
                             <button onclick="showHomePage()" class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -1410,7 +1423,7 @@
             return `
                 <div class="container mx-auto px-4 py-8 max-w-6xl">
                     <!-- Header -->
-                    <header class="mb-8">
+                    <header class="mb-8 sticky-header">
                         <button onclick="showHomePage()" class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -2329,7 +2342,7 @@
 
             return `
                 <div class="container mx-auto px-4 py-8 max-w-7xl">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center justify-between mb-6 sticky-header">
                         <div>
                             <h1 class="text-2xl font-bold gradient-text">⚙️ 数据管理面板</h1>
                             <p class="text-gray-400 text-sm mt-1">PB / ROE / 股息率 手动更新（PE数据自动获取无需修改）</p>
