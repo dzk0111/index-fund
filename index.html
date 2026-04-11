@@ -2335,11 +2335,11 @@
                             class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
                     </td>
                     <td class="py-2 px-3">
-                        <input type="number" step="0.001" min="0" max="1" id="roe-${id}" value="${cfg.roe}"
+                        <input type="number" step="0.01" min="0" max="100" id="roe-${id}" value="${(cfg.roe * 100).toFixed(2)}"
                             class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
                     </td>
                     <td class="py-2 px-3">
-                        <input type="number" step="0.001" min="0" max="1" id="div-${id}" value="${cfg.dividendRate}"
+                        <input type="number" step="0.01" min="0" max="100" id="div-${id}" value="${(cfg.dividendRate * 100).toFixed(2)}"
                             class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
                     </td>
                 </tr>`;
@@ -2437,24 +2437,26 @@
             Object.keys(indices).forEach(id => {
                 const cfg = indices[id];
                 const fields = [
-                    { key: 'currentPB', inputId: `pb-${id}`, label: 'PB' },
-                    { key: 'pbPercentile', inputId: `pbpct-${id}`, label: 'PB分位%' },
-                    { key: 'roe', inputId: `roe-${id}`, label: 'ROE' },
-                    { key: 'dividendRate', inputId: `div-${id}`, label: '股息率' }
+                    { key: 'currentPB', inputId: `pb-${id}`, label: 'PB', isPercent: false },
+                    { key: 'pbPercentile', inputId: `pbpct-${id}`, label: 'PB分位%', isPercent: false },
+                    { key: 'roe', inputId: `roe-${id}`, label: 'ROE', isPercent: true },
+                    { key: 'dividendRate', inputId: `div-${id}`, label: '股息率', isPercent: true }
                 ];
                 fields.forEach(f => {
                     const input = document.getElementById(f.inputId);
                     if (!input) return;
-                    const newVal = parseFloat(input.value);
+                    let newVal = parseFloat(input.value);
                     if (isNaN(newVal)) return;
+                    // 百分比字段：显示的是百分比，存储的是小数
+                    if (f.isPercent) newVal = newVal / 100;
                     const oldVal = cfg[f.key];
                     if (newVal !== oldVal) {
                         changes.push({
                             date: today,
                             index_name: cfg.name,
                             field: f.label,
-                            old_value: String(oldVal),
-                            new_value: String(newVal)
+                            old_value: f.isPercent ? `${(oldVal * 100).toFixed(2)}%` : String(oldVal),
+                            new_value: f.isPercent ? `${(newVal * 100).toFixed(2)}%` : String(newVal)
                         });
                         cfg[f.key] = newVal;
                     }
