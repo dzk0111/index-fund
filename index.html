@@ -547,14 +547,34 @@
                     }
                 });
                 
-                // ✅ 从真实历史数据动态计算PE分位数（保留两位小数）
+                // ✅ 从真实历史数据动态计算PE分位数、status、targetPE
                 indexData.forEach(index => {
                     if (index.realPEHistory && index.realPEHistory.length > 0) {
                         const sorted = [...index.realPEHistory].sort((a, b) => a - b);
+                        // PE分位数
                         const rank = sorted.filter(v => v <= index.currentPE).length;
                         const percentile = (rank / sorted.length * 100).toFixed(2);
                         index.pePercentile = parseFloat(percentile);
                         console.log(`${index.name} PE分位动态计算: PE=${index.currentPE}, 排名${rank}/${sorted.length}, 分位=${percentile}%`);
+
+                        // 动态计算 status：基于 PE分位数
+                        if (index.pePercentile < 30) {
+                            index.status = 'undervalued';
+                        } else if (index.pePercentile > 70) {
+                            index.status = 'overvalued';
+                        } else {
+                            index.status = 'fair';
+                        }
+
+                        // 动态计算 targetPE：基于历史分位线
+                        const p30idx = Math.floor(sorted.length * 30 / 100);
+                        const p70idx = Math.floor(sorted.length * 70 / 100);
+                        index.targetPE = {
+                            undervalued: sorted[p70idx],  // 乐观：PE回到70%分位（高估区间）
+                            fair: index.currentPE,          // 中性：PE保持不变
+                            overvalued: sorted[p30idx]      // 悲观：PE回到30%分位（低估区间）
+                        };
+                        console.log(`${index.name} targetPE动态计算: 乐观(70%分位)=${sorted[p70idx].toFixed(2)}, 中性(当前)=${index.currentPE.toFixed(2)}, 悲观(30%分位)=${sorted[p30idx].toFixed(2)}`);
                     }
                 });
 
@@ -602,173 +622,150 @@
         }
 
         // 数据定义（基于等雨来策略）
-        // currentPE / pePercentile 来自中证指数官网（csindex.com.cn）2026-03-23 真实数据
-        // 分位数基于各指数全量历史日度数据计算
+        // ⚠️ 以下仅为兜底默认值，所有数据在运行时会被真实数据覆盖：
+        //   - currentPE / pePercentile → 从 index_pe_history.json 动态加载（中证官网）
+        //   - status → 从 PE分位动态计算（<30%低估，30-70%合理，>70%高估）
+        //   - targetPE → 从历史数据动态计算（乐观=70%分位，中性=当前PE，悲观=30%分位）
+        //   - PB / pbPercentile / roe / dividendRate → 从 index_config.json 动态加载
         const indexData = [
             {
                 id: 'hs300',
                 name: '沪深300',
                 code: '000300',
-                currentPE: 13.70,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 67,          // 基于2011年至今3513条数据
-                currentPB: 1.44,
-                pbPercentile: 64,
-                dividendRate: 0.0290,
-                roe: 0.105,
-                historicalPE: [14.5, 15.8, 16.2, 14.8, 13.5, 12.2, 11.5, 11.8, 12.7, 13.70],
-                historicalPB: [1.55, 1.65, 1.72, 1.58, 1.45, 1.30, 1.20, 1.22, 1.35, 1.44],
-                targetPE: { undervalued: 16, fair: 14.5, overvalued: 12 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'cyb',
                 name: '创业板50',
                 code: '930743',
-                currentPE: 26.98,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 21,          // 基于2015年至今2578条数据
-                currentPB: 3.8,
-                pbPercentile: 25,
-                dividendRate: 0.008,
-                roe: 0.14,
-                historicalPE: [65, 72, 68, 55, 45, 38, 30, 32, 36, 26.98],
-                historicalPB: [10.5, 11.2, 10.5, 8.4, 6.8, 5.8, 4.5, 4.8, 5.4, 3.8],
-                targetPE: { undervalued: 50, fair: 42, overvalued: 36 },
-                status: 'undervalued',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'zzyl',
                 name: '中证医疗',
                 code: '399989',
-                currentPE: 26.96,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 17,          // 基于2015年至今2637条数据（历史低位）
-                currentPB: 3.5,
-                pbPercentile: 18,
-                dividendRate: 0.010,
-                roe: 0.13,
-                historicalPE: [85, 95, 88, 72, 58, 46, 36, 35, 38, 26.96],
-                historicalPB: [10.5, 12.2, 11.5, 9.4, 7.5, 6.0, 4.7, 4.5, 5.0, 3.5],
-                targetPE: { undervalued: 50, fair: 42, overvalued: 35 },
-                status: 'undervalued',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'zzbj',
                 name: '中证白酒',
                 code: '399997',
-                currentPE: 17.43,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 1,           // 历史极低位！基于2015年至今2616条数据
-                currentPB: 4.80,
-                pbPercentile: 3,
-                dividendRate: 0.0393,
-                roe: 0.265,
-                historicalPE: [45, 52, 58, 48, 38, 28, 20, 22, 26, 17.43],
-                historicalPB: [13.5, 15.8, 17.5, 14.4, 11.4, 8.4, 6.0, 6.5, 7.8, 4.80],
-                targetPE: { undervalued: 30, fair: 25, overvalued: 20 },
-                status: 'undervalued',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'zz500',
                 name: '中证500',
                 code: '000905',
-                currentPE: 26.66,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 69,          // 基于2011年至今3513条数据
-                currentPB: 1.72,
-                pbPercentile: 68,
-                dividendRate: 0.015,
-                roe: 0.09,
-                historicalPE: [28, 32, 36, 30, 25, 22, 20, 22, 24, 26.66],
-                historicalPB: [2.3, 2.6, 2.9, 2.45, 2.05, 1.75, 1.55, 1.65, 1.78, 1.72],
-                targetPE: { undervalued: 38, fair: 32, overvalued: 28 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'sz50',
                 name: '上证50',
                 code: '000016',
-                currentPE: 11.29,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 76,          // 基于2011年至今3513条数据
-                currentPB: 1.25,
-                pbPercentile: 72,
-                dividendRate: 0.0340,
-                roe: 0.110,
-                historicalPE: [13.5, 14.2, 15.0, 13.5, 12.2, 10.8, 9.5, 9.8, 10.6, 11.29],
-                historicalPB: [1.35, 1.42, 1.50, 1.38, 1.25, 1.10, 0.95, 0.98, 1.08, 1.25],
-                targetPE: { undervalued: 13.5, fair: 12, overvalued: 10.5 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'fdcre',
                 name: '中证地产',
                 code: '000975',
-                currentPE: 15.69,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 40,          // 基于2011年至今3513条数据
-                currentPB: 0.72,
-                pbPercentile: 35,
-                dividendRate: 0.042,
-                roe: 0.08,
-                historicalPE: [14, 16, 18, 16, 14, 12, 10, 12, 14, 15.69],
-                historicalPB: [1.05, 1.20, 1.35, 1.18, 0.98, 0.80, 0.65, 0.70, 0.80, 0.72],
-                targetPE: { undervalued: 20, fair: 17, overvalued: 14 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'kc50',
                 name: '科创板50',
                 code: '000688',
-                currentPE: 66.71,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 70,          // 基于2020年至今1385条数据
-                currentPB: 5.5,
-                pbPercentile: 68,
-                dividendRate: 0.005,
-                roe: 0.09,
-                historicalPE: [75, 85, 95, 82, 65, 52, 40, 45, 55, 66.71],
-                historicalPB: [10.2, 11.8, 13.2, 11.0, 8.8, 7.0, 5.5, 6.0, 7.2, 5.5],
-                targetPE: { undervalued: 90, fair: 75, overvalued: 62 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'xny',
                 name: '中证新能源',
                 code: '931151',
-                currentPE: 32.47,          // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 74,          // 基于2019年至今1682条数据
-                currentPB: 2.8,
-                pbPercentile: 72,
-                dividendRate: 0.006,
-                roe: 0.12,
-                historicalPE: [48, 58, 68, 55, 42, 32, 25, 28, 34, 32.47],
-                historicalPB: [6.0, 7.2, 8.5, 6.8, 5.2, 4.0, 3.0, 3.4, 3.8, 2.8],
-                targetPE: { undervalued: 45, fair: 36, overvalued: 28 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             },
             {
                 id: 'zzhl',
                 name: '中证红利',
                 code: '000922',
-                currentPE: 8.44,           // 中证指数官网 TTM PE 2026-03-23
-                pePercentile: 57,          // 基于2011年至今3513条数据
-                currentPB: 0.80,
-                pbPercentile: 55,
-                dividendRate: 0.052,
-                roe: 0.10,
-                historicalPE: [11.2, 12.8, 14.2, 12.0, 10.5, 9.2, 7.8, 8.2, 9.0, 8.44],
-                historicalPB: [1.18, 1.32, 1.48, 1.28, 1.10, 0.95, 0.80, 0.84, 0.92, 0.80],
-                targetPE: { undervalued: 10, fair: 9, overvalued: 8 },
-                status: 'fair',
-                dataSource: '中证指数官网（真实日度PE）'
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
             }
         ];
 
         // 为每个指数计算预测数据（使用等雨来策略）
         function updatePredictions(index) {
+            if (!index.currentPE || !index.targetPE || !index.roe || !index.dividendRate) {
+                index.predictions = null;
+                return;
+            }
             index.predictions = {
                 undervalued: {
                     1: calculateDengyulaiReturn(index.currentPE, index.targetPE.undervalued, index.roe, index.dividendRate, 1),
@@ -791,7 +788,7 @@
             };
         }
         
-        // 初始化所有指数的预测数据
+        // 初始化所有指数的预测数据（数据加载前先尝试计算，加载后会重新计算）
         indexData.forEach(updatePredictions);
 
         // 渲染首页
@@ -837,13 +834,14 @@
                     <h2 class="text-2xl font-bold mb-6">指数列表（${indexData.length}个）</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         ${[...indexData].sort((a, b) => {
-                            const statusOrder = { undervalued: 0, fair: 1, overvalued: 2 };
-                            const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+                            const statusOrder = { undervalued: 0, fair: 1, overvalued: 2, null: 3 };
+                            const statusDiff = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
                             if (statusDiff !== 0) return statusDiff;
                             // 同状态：按汉字笔画从少到多排序
                             return a.name.localeCompare(b.name, 'zh-Hans-CN', { sensitivity: 'variant', collation: 'stroke' });
                         }).map(index => {
-                            const statusConfig = getStatusConfig(index.status);
+                            if (!index.currentPE || index.currentPE === null) return '';
+                            const statusConfig = getStatusConfig(index.status || 'fair');
                             return `
                                 <div onclick="showDetail('${index.id}')"
                                      class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-5 cursor-pointer card-hover transition-all duration-300 ${statusConfig.class}">
@@ -864,11 +862,11 @@
                                         </div>
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">PE分位:</span>
-                                            <span class="text-white font-medium">${index.pePercentile.toFixed(2)}%</span>
+                                            <span class="text-white font-medium">${index.pePercentile != null ? index.pePercentile.toFixed(2) + '%' : '--'}</span>
                                         </div>
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">ROE:</span>
-                                            <span class="text-white font-medium">${(index.roe * 100).toFixed(2)}%</span>
+                                            <span class="text-white font-medium">${index.roe != null ? (index.roe * 100).toFixed(2) + '%' : '--'}</span>
                                         </div>
                                     </div>
                                     <div class="h-[120px] bg-slate-900/50 rounded-lg p-2">
@@ -892,24 +890,28 @@
         // 渲染详情页
         function renderDetailPage(indexId, currentTab = 'undervalued') {
             const index = indexData.find(i => i.id === indexId);
-            const statusConfig = getStatusConfig(index.status);
+            if (!index || !index.currentPE) {
+                document.getElementById('app').innerHTML = '<div class="container mx-auto px-4 py-8 text-center text-gray-400"><p>数据加载中，请稍后刷新...</p></div>';
+                return;
+            }
+            const statusConfig = getStatusConfig(index.status || 'fair');
 
             // 计算等雨来策略的收益分解
             const years = 5;
-            const targetPE = index.targetPE[currentTab];
-            const annualReturn = index.predictions[currentTab][years];
+            const targetPE = index.targetPE ? index.targetPE[currentTab] : index.currentPE;
+            const annualReturn = index.predictions ? (index.predictions[currentTab] ? index.predictions[currentTab][years] : null) : null;
             
             // 保留收益率
-            const retentionRate = 1 - index.dividendRate;
-            const retainedEarningsRate = index.roe * retentionRate;
+            const retentionRate = index.dividendRate ? (1 - index.dividendRate) : 0;
+            const retainedEarningsRate = index.roe ? (index.roe * retentionRate) : 0;
             const retainedEarningsPercent = (retainedEarningsRate * 100).toFixed(1);
             
             // PE变化率
-            const peChangeRate = Math.pow(targetPE / index.currentPE, 1 / years) - 1;
+            const peChangeRate = targetPE ? Math.pow(targetPE / index.currentPE, 1 / years) - 1 : 0;
             const peChangePercent = (peChangeRate * 100).toFixed(1);
 
             // 总年化
-            const totalPercent = annualReturn.toFixed(1);
+            const totalPercent = annualReturn != null ? annualReturn.toFixed(1) : '--';
 
             return `
                 <div class="container mx-auto px-4 py-8 max-w-6xl">
@@ -941,19 +943,19 @@
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">PE分位数</div>
-                                <div class="text-2xl font-bold ${getReturnColor(100 - index.pePercentile, 'total')}">${index.pePercentile.toFixed(2)}%</div>
+                                <div class="text-2xl font-bold ${index.pePercentile != null ? getReturnColor(100 - index.pePercentile, 'total') : ''}">${index.pePercentile != null ? index.pePercentile.toFixed(2) + '%' : '--'}</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">PB</div>
-                                <div class="text-2xl font-bold text-white">${index.currentPB.toFixed(2)}</div>
+                                <div class="text-2xl font-bold text-white">${index.currentPB != null ? index.currentPB.toFixed(2) : '--'}</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">ROE</div>
-                                <div class="text-2xl font-bold text-white">${(index.roe * 100).toFixed(2)}%</div>
+                                <div class="text-2xl font-bold text-white">${index.roe != null ? (index.roe * 100).toFixed(2) + '%' : '--'}</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">股息率</div>
-                                <div class="text-2xl font-bold text-white">${(index.dividendRate * 100).toFixed(2)}%</div>
+                                <div class="text-2xl font-bold text-white">${index.dividendRate != null ? (index.dividendRate * 100).toFixed(2) + '%' : '--'}</div>
                             </div>
                         </div>
                         <div class="mt-4 p-4 bg-slate-700/50 rounded-xl">
@@ -1063,7 +1065,9 @@
                                 </thead>
                                 <tbody>
                                     ${[1, 3, 5, 10].map(years => {
-                                        const annualReturn = index.predictions[currentTab][years];
+                                        const ar = index.predictions && index.predictions[currentTab] ? index.predictions[currentTab][years] : null;
+                                        if (ar == null) return `<tr class="border-b border-slate-700/50"><td class="py-4 font-medium text-white">${years}年</td><td class="py-4 text-gray-500">--</td><td class="py-4 text-gray-500">--</td><td class="py-4 text-gray-500">--</td></tr>`;
+                                        const annualReturn = ar;
                                         const totalReturn = calculateTotalReturn(annualReturn, years);
                                         const finalAmount = calculateFinalAmount(100000, annualReturn, years);
                                         const profit = finalAmount - 100000;
@@ -1140,13 +1144,17 @@
                 if (index.realPEHistory && index.realPEHistory.length > 0) {
                     displayPE = [...index.realPEHistory];
                     displayLabels = [...index.realPEHistoryDates];
-                } else {
+                } else if (index.historicalPE && index.historicalPE.length > 0) {
                     displayPE = index.historicalPE;
                     const currentYear = new Date().getFullYear();
                     displayLabels = [];
                     for (let i = 9; i >= 0; i--) {
                         displayLabels.push(String(currentYear - i));
                     }
+                } else {
+                    // 无任何数据时显示提示
+                    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 text-xs">等待数据加载...</div>';
+                    return;
                 }
 
                 // 计算PE分位值（基于真实完整数据）
@@ -1939,33 +1947,9 @@
 
                     console.log(`时间范围: ${labels[0]} 到 ${labels[labels.length - 1]} (${dailyPE.length}个数据点)`);
                 } else {
-                    console.log(`使用 ${index.name} 的插值数据`);
-                    // 生成约2500个交易日的日期标签（从10年前到现在）
-                    const currentDate = new Date();
-                    labels = [];
-
-                    // 根据时间范围确定数据点数
-                    let totalDays;
-                    if (currentHistoryRange === '3years') {
-                        totalDays = 750; // 3年
-                    } else if (currentHistoryRange === '5years') {
-                        totalDays = 1250; // 5年
-                    } else {
-                        totalDays = 2500; // 10年
-                    }
-
-                    // 从当前日期倒推约N个交易日
-                    // 简单模拟：每个交易日间隔1天，周末和节假日不排除（简化处理）
-                    for (let i = totalDays - 1; i >= 0; i--) {
-                        const date = new Date(currentDate);
-                        date.setDate(date.getDate() - i);
-                        // 格式化日期为 YYYY-MM-DD
-                        const dateStr = date.toISOString().split('T')[0];
-                        labels.push(dateStr);
-                    }
-
-                    // 从年数据生成日数据（基于真实年数据，使用固定种子插值）
-                    dailyPE = generateDailyData(index.historicalPE, totalDays);
+                    console.log(`${index.name} 无真实PE历史数据，无法渲染图表`);
+                    document.getElementById('historyChartTitle').textContent = '📊 历史估值走势';
+                    return;
                 }
 
                 // 更新标题显示当前时间范围
@@ -2168,7 +2152,7 @@
 
             // 收益对比图表
             const returnCtx = document.getElementById('returnChart');
-            if (returnCtx) {
+            if (returnCtx && index.predictions) {
                 new Chart(returnCtx.getContext('2d'), {
                     type: 'line',
                     data: {
@@ -2176,21 +2160,21 @@
                         datasets: [
                             {
                                 label: '乐观（PE回高估区间）',
-                                data: [1, 3, 5, 10].map(y => index.predictions.undervalued[y]),
+                                data: [1, 3, 5, 10].map(y => index.predictions.undervalued ? index.predictions.undervalued[y] : null),
                                 borderColor: '#10b981',
                                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                 tension: 0.4
                             },
                             {
                                 label: '中性（PE保持不变）',
-                                data: [1, 3, 5, 10].map(y => index.predictions.fair[y]),
+                                data: [1, 3, 5, 10].map(y => index.predictions.fair ? index.predictions.fair[y] : null),
                                 borderColor: '#f59e0b',
                                 backgroundColor: 'rgba(245, 158, 11, 0.1)',
                                 tension: 0.4
                             },
                             {
                                 label: '悲观（PE回低估区间）',
-                                data: [1, 3, 5, 10].map(y => index.predictions.overvalued[y]),
+                                data: [1, 3, 5, 10].map(y => index.predictions.overvalued ? index.predictions.overvalued[y] : null),
                                 borderColor: '#6b7280',
                                 backgroundColor: 'rgba(107, 114, 128, 0.1)',
                                 tension: 0.4
