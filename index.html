@@ -825,6 +825,10 @@
                             <button onclick="showQualityReport()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                                 📊 数据质量报告
                             </button>
+                            <span class="text-gray-600">|</span>
+                            <button onclick="showAdminPanel()" class="text-gray-600 hover:text-gray-400 text-xs transition-colors">
+                                ⚙️ 管理
+                            </button>
                         </div>
                     </header>
 
@@ -2222,6 +2226,280 @@
                     }
                 });
             }
+        }
+
+        // ==================== 管理面板 ====================
+
+        // SHA-256 哈希函数
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 管理员登录验证
+        async function adminLogin() {
+            const pwd = document.getElementById('admin-pwd').value;
+            const pwdHash = await sha256(pwd);
+            const configHash = indexConfigData ? indexConfigData.admin_password_hash : null;
+            if (configHash && pwdHash === configHash) {
+                localStorage.setItem('adminAuth', 'true');
+                localStorage.setItem('adminAuthTime', Date.now().toString());
+                showAdminPanel();
+            } else {
+                alert('密码错误');
+                document.getElementById('admin-pwd').value = '';
+            }
+        }
+
+        // 检查管理员登录状态
+        function isAdminLoggedIn() {
+            return localStorage.getItem('adminAuth') === 'true';
+        }
+
+        // 退出管理员模式
+        function adminLogout() {
+            localStorage.removeItem('adminAuth');
+            localStorage.removeItem('adminAuthTime');
+            showHomePage();
+        }
+
+        // 显示管理面板
+        function showAdminPanel() {
+            if (!isAdminLoggedIn()) {
+                document.getElementById('app').innerHTML = renderAdminLoginPage();
+                document.getElementById('admin-pwd').addEventListener('keydown', e => {
+                    if (e.key === 'Enter') adminLogin();
+                });
+                return;
+            }
+            document.getElementById('app').innerHTML = renderAdminPage();
+        }
+
+        // 渲染管理员登录页
+        function renderAdminLoginPage() {
+            return `
+                <div class="container mx-auto px-4 py-20 max-w-md">
+                    <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-8">
+                        <h1 class="text-2xl font-bold text-white mb-2 text-center">⚙️ 管理面板</h1>
+                        <p class="text-gray-400 text-sm mb-6 text-center">请输入管理密码</p>
+                        <div class="mb-4">
+                            <input type="password" id="admin-pwd" placeholder="输入密码"
+                                class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <button onclick="adminLogin()"
+                            class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors">
+                            登录
+                        </button>
+                        <button onclick="showHomePage()"
+                            class="w-full mt-3 py-3 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-xl font-medium transition-colors">
+                            返回首页
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 渲染管理面板主页
+        function renderAdminPage() {
+            const indices = indexConfigData && indexConfigData.indices ? indexConfigData.indices : {};
+            const history = indexConfigData && indexConfigData.change_history ? indexConfigData.change_history : [];
+
+            const historyRows = history.length > 0
+                ? history.slice().reverse().map(h => `
+                    <tr class="border-b border-slate-700/50">
+                        <td class="py-2 px-3 text-gray-400 text-xs">${h.date}</td>
+                        <td class="py-2 px-3 text-white text-xs">${h.index_name}</td>
+                        <td class="py-2 px-3 text-gray-300 text-xs">${h.field}</td>
+                        <td class="py-2 px-3 text-red-400 text-xs">${h.old_value}</td>
+                        <td class="py-2 px-3 text-green-400 text-xs">${h.new_value}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="5" class="py-4 text-center text-gray-500 text-sm">暂无修改记录</td></tr>';
+
+            const indexRows = Object.entries(indices).map(([id, cfg]) => {
+                const idx = indexData.find(i => i.id === id);
+                const currentPE = idx ? idx.currentPE.toFixed(2) : '-';
+                return `
+                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                    <td class="py-2 px-3 text-white font-medium text-sm">${cfg.name}</td>
+                    <td class="py-2 px-3 text-gray-400 text-xs">${cfg.code}</td>
+                    <td class="py-2 px-3 text-blue-400 text-sm">${currentPE}</td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="0.01" min="0" id="pb-${id}" value="${cfg.currentPB}"
+                            class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="0.1" min="0" max="100" id="pbpct-${id}" value="${cfg.pbPercentile}"
+                            class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="0.001" min="0" max="1" id="roe-${id}" value="${cfg.roe}"
+                            class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="0.001" min="0" max="1" id="div-${id}" value="${cfg.dividendRate}"
+                            class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:border-blue-500">
+                    </td>
+                </tr>`;
+            }).join('');
+
+            return `
+                <div class="container mx-auto px-4 py-8 max-w-7xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold gradient-text">⚙️ 数据管理面板</h1>
+                            <p class="text-gray-400 text-sm mt-1">PB / ROE / 股息率 手动更新（PE数据自动获取无需修改）</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="showHomePage()"
+                                class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-xl text-sm transition-colors">
+                                返回首页
+                            </button>
+                            <button onclick="adminLogout()"
+                                class="px-4 py-2 bg-red-900/50 hover:bg-red-800/50 text-red-400 rounded-xl text-sm transition-colors">
+                                退出登录
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 数据编辑区 -->
+                    <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-6 mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-bold text-white">📊 指数数据编辑</h2>
+                            <div class="text-sm text-gray-400">
+                                上次手动更新：${indexConfigData ? indexConfigData.update_date : '未知'}
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-slate-600">
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">指数</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">代码</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">PE(自动)</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">PB</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">PB分位%</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">ROE</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">股息率</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${indexRows}</tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex gap-3">
+                            <button onclick="saveConfigData()"
+                                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+                                保存并推送
+                            </button>
+                            <button onclick="showAdminPanel()"
+                                class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded-xl text-sm transition-colors">
+                                重置
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 修改历史 -->
+                    <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-6">
+                        <h2 class="text-lg font-bold text-white mb-4">📝 修改历史</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-slate-600">
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">日期</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">指数</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">字段</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">原值</th>
+                                        <th class="py-3 px-3 text-left text-gray-400 text-xs font-medium">新值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${historyRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 保存配置数据（下载JSON文件，由push_to_github.py推送）
+        async function saveConfigData() {
+            if (!indexConfigData || !indexConfigData.indices) {
+                alert('配置数据未加载');
+                return;
+            }
+
+            const indices = indexConfigData.indices;
+            const today = new Date().toISOString().split('T')[0];
+            const changes = [];
+
+            // 读取所有输入框的值，与原值比对，记录变更
+            Object.keys(indices).forEach(id => {
+                const cfg = indices[id];
+                const fields = [
+                    { key: 'currentPB', inputId: `pb-${id}`, label: 'PB' },
+                    { key: 'pbPercentile', inputId: `pbpct-${id}`, label: 'PB分位%' },
+                    { key: 'roe', inputId: `roe-${id}`, label: 'ROE' },
+                    { key: 'dividendRate', inputId: `div-${id}`, label: '股息率' }
+                ];
+                fields.forEach(f => {
+                    const input = document.getElementById(f.inputId);
+                    if (!input) return;
+                    const newVal = parseFloat(input.value);
+                    if (isNaN(newVal)) return;
+                    const oldVal = cfg[f.key];
+                    if (newVal !== oldVal) {
+                        changes.push({
+                            date: today,
+                            index_name: cfg.name,
+                            field: f.label,
+                            old_value: String(oldVal),
+                            new_value: String(newVal)
+                        });
+                        cfg[f.key] = newVal;
+                    }
+                });
+            });
+
+            if (changes.length === 0) {
+                alert('没有检测到数据变化');
+                return;
+            }
+
+            // 确认保存
+            const changeSummary = changes.map(c => `${c.index_name} ${c.field}: ${c.old_value} -> ${c.new_value}`).join('\n');
+            if (!confirm(`确认以下修改？\n\n${changeSummary}`)) return;
+
+            // 更新配置
+            indexConfigData.update_date = today;
+            indexConfigData.change_history = (indexConfigData.change_history || []).concat(changes);
+
+            // 下载更新后的 JSON 文件
+            const jsonStr = JSON.stringify(indexConfigData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index_config.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            // 同时更新 indexData 中的值（当前页面即时生效）
+            indexData.forEach(index => {
+                const config = indexConfigData.indices[index.id];
+                if (config) {
+                    if (config.currentPB !== undefined) index.currentPB = config.currentPB;
+                    if (config.pbPercentile !== undefined) index.pbPercentile = config.pbPercentile;
+                    if (config.dividendRate !== undefined) index.dividendRate = config.dividendRate;
+                    if (config.roe !== undefined) index.roe = config.roe;
+                }
+            });
+            indexData.forEach(updatePredictions);
+
+            alert(`修改完成！共修改 ${changes.length} 项数据。\n\n已下载 index_config.json 文件。\n请将该文件复制到 github-deploy 目录后，执行 push_to_github.py 推送到 GitHub。`);
+
+            // 刷新管理面板显示最新数据
+            showAdminPanel();
         }
 
         // 初始化应用
