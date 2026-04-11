@@ -834,14 +834,17 @@
                     <!-- Index Cards Grid -->
                     <h2 class="text-2xl font-bold mb-6">指数列表（${indexData.length}个）</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                        ${[...indexData].sort((a, b) => {
-                            const statusOrder = { undervalued: 0, fair: 1, overvalued: 2, null: 3 };
-                            const statusDiff = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3);
+                        ${indexData.filter(index => index.currentPE != null).sort((a, b) => {
+                            const statusOrder = { undervalued: 0, fair: 1, overvalued: 2 };
+                            const statusDiff = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
                             if (statusDiff !== 0) return statusDiff;
-                            // 同状态：按汉字笔画从少到多排序
-                            return a.name.localeCompare(b.name, 'zh-Hans-CN', { sensitivity: 'variant', collation: 'stroke' });
+                            // 同状态：按PE分位数从低到高排序
+                            if ((a.pePercentile ?? 0) !== (b.pePercentile ?? 0)) {
+                                return (a.pePercentile ?? 0) - (b.pePercentile ?? 0);
+                            }
+                            // 同分位：按名称排序
+                            return a.name.localeCompare(b.name, 'zh-Hans-CN');
                         }).map(index => {
-                            if (!index.currentPE || index.currentPE === null) return '';
                             const statusConfig = getStatusConfig(index.status || 'fair');
                             return `
                                 <div onclick="showDetail('${index.id}')"
@@ -2085,6 +2088,9 @@
                             },
                             tooltip: {
                                 enabled: true,
+                                position: 'nearest',
+                                xAlign: 'left',
+                                yAlign: 'center',
                                 backgroundColor: 'rgba(254, 243, 199, 0.95)',
                                 titleColor: '#92400e',
                                 bodyColor: '#d97706',
