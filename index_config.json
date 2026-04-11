@@ -1,21 +1,43 @@
 {
-  "update_date": "2026-04-10",
+  "update_date": "2026-04-11",
   "description": "指数基金辅助工具手动配置数据（PB/ROE/股息率等），PE数据自动获取无需在此维护",
   "admin_password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-  "change_history": [],
+  "change_history": [
+    {
+      "date": "2026-04-11",
+      "index_name": "中证白酒",
+      "field": "PB",
+      "old_value": "4.8",
+      "new_value": "4.77"
+    },
+    {
+      "date": "2026-04-11",
+      "index_name": "中证白酒",
+      "field": "ROE",
+      "old_value": "0.265",
+      "new_value": "0.2657"
+    },
+    {
+      "date": "2026-04-11",
+      "index_name": "中证白酒",
+      "field": "股息率",
+      "old_value": "0.0393",
+      "new_value": "0.0395"
+    }
+  ],
   "indices": {
     "hs300": {
       "name": "沪深300",
       "code": "000300",
       "currentPB": 1.44,
       "pbPercentile": 64,
-      "dividendRate": 0.0290,
+      "dividendRate": 0.029,
       "roe": 0.105
     },
     "cyb": {
       "name": "创业板50",
       "code": "930743",
-      "currentPB": 3.80,
+      "currentPB": 3.8,
       "pbPercentile": 25,
       "dividendRate": 0.008,
       "roe": 0.14
@@ -23,18 +45,18 @@
     "zzyl": {
       "name": "中证医疗",
       "code": "399989",
-      "currentPB": 3.50,
+      "currentPB": 3.5,
       "pbPercentile": 18,
-      "dividendRate": 0.010,
+      "dividendRate": 0.01,
       "roe": 0.13
     },
     "zzbj": {
       "name": "中证白酒",
       "code": "399997",
-      "currentPB": 4.80,
+      "currentPB": 4.77,
       "pbPercentile": 3,
-      "dividendRate": 0.0393,
-      "roe": 0.265
+      "dividendRate": 0.0395,
+      "roe": 0.2657
     },
     "zz500": {
       "name": "中证500",
@@ -49,8 +71,8 @@
       "code": "000016",
       "currentPB": 1.25,
       "pbPercentile": 72,
-      "dividendRate": 0.0340,
-      "roe": 0.110
+      "dividendRate": 0.034,
+      "roe": 0.11
     },
     "fdcre": {
       "name": "中证地产",
@@ -63,7 +85,7 @@
     "kc50": {
       "name": "科创板50",
       "code": "000688",
-      "currentPB": 5.50,
+      "currentPB": 5.5,
       "pbPercentile": 68,
       "dividendRate": 0.005,
       "roe": 0.09
@@ -71,7 +93,7 @@
     "xny": {
       "name": "中证新能源",
       "code": "931151",
-      "currentPB": 2.80,
+      "currentPB": 2.8,
       "pbPercentile": 72,
       "dividendRate": 0.006,
       "roe": 0.12
@@ -79,10 +101,10 @@
     "zzhl": {
       "name": "中证红利",
       "code": "000922",
-      "currentPB": 0.80,
+      "currentPB": 0.8,
       "pbPercentile": 55,
       "dividendRate": 0.052,
-      "roe": 0.10
+      "roe": 0.1
     }
   }
 }
