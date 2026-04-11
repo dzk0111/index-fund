@@ -1238,6 +1238,16 @@
                             },
                             tooltip: {
                                 enabled: true,
+                                position: function(context) {
+                                    var chart = context.chart;
+                                    var chartArea = chart.chartArea;
+                                    var x = context[0].caretX;
+                                    if (x > (chartArea.left + chartArea.right) / 2) {
+                                        return { x: x, y: context[0].caretY, xAlign: 'right', yAlign: 'center' };
+                                    } else {
+                                        return { x: x, y: context[0].caretY, xAlign: 'left', yAlign: 'center' };
+                                    }
+                                },
                                 backgroundColor: 'rgba(254, 243, 199, 0.95)',
                                 titleColor: '#92400e',
                                 bodyColor: '#d97706',
@@ -1245,14 +1255,8 @@
                                 borderWidth: 1,
                                 padding: 8,
                                 displayColors: false,
-                                titleFont: {
-                                    size: 11,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 12,
-                                    weight: 'bold'
-                                },
+                                titleFont: { size: 11, weight: 'bold' },
+                                bodyFont: { size: 12, weight: 'bold' },
                                 callbacks: {
                                     title: function(context) {
                                         return context[0].label;
@@ -2088,9 +2092,17 @@
                             },
                             tooltip: {
                                 enabled: true,
-                                position: 'nearest',
-                                xAlign: 'left',
-                                yAlign: 'center',
+                                position: function(context) {
+                                    // 鼠标在右半边时，tooltip显示在左边；否则显示在右边
+                                    var chart = context.chart;
+                                    var chartArea = chart.chartArea;
+                                    var x = context[0].caretX;
+                                    if (x > (chartArea.left + chartArea.right) / 2) {
+                                        return { x: x, y: context[0].caretY, xAlign: 'right', yAlign: 'center' };
+                                    } else {
+                                        return { x: x, y: context[0].caretY, xAlign: 'left', yAlign: 'center' };
+                                    }
+                                },
                                 backgroundColor: 'rgba(254, 243, 199, 0.95)',
                                 titleColor: '#92400e',
                                 bodyColor: '#d97706',
@@ -2098,14 +2110,8 @@
                                 borderWidth: 1,
                                 padding: 12,
                                 displayColors: false,
-                                titleFont: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 16,
-                                    weight: 'bold'
-                                },
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 16, weight: 'bold' },
                                 callbacks: {
                                     title: function(context) {
                                         return context[0].label;
