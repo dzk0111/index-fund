@@ -169,7 +169,7 @@
         function getPredictionTabConfig(tab) {
             const configs = {
                 undervalued: { text: '乐观', desc: '（PE回到高估区间）', emoji: '🚀', color: '#10b981', class: 'status-undervalued' },
-                fair: { text: '中性', desc: '（PE保持不变）', emoji: '🟡', color: '#f59e0b', class: 'status-fair' },
+                fair: { text: '中性', desc: '（PE回到合理区间）', emoji: '🟡', color: '#f59e0b', class: 'status-fair' },
                 overvalued: { text: '悲观', desc: '（PE回到低估区间）', emoji: '🌧️', color: '#6b7280', class: 'status-overvalued' }
             };
             return configs[tab];
@@ -568,13 +568,14 @@
 
                         // 动态计算 targetPE：基于历史分位线
                         const p30idx = Math.floor(sorted.length * 30 / 100);
+                        const p50idx = Math.floor(sorted.length * 50 / 100);
                         const p70idx = Math.floor(sorted.length * 70 / 100);
                         index.targetPE = {
                             undervalued: sorted[p70idx],  // 乐观：PE回到70%分位（高估区间）
-                            fair: index.currentPE,          // 中性：PE保持不变
+                            fair: sorted[p50idx],          // 中性：PE回到50%分位（合理区间中位数）
                             overvalued: sorted[p30idx]      // 悲观：PE回到30%分位（低估区间）
                         };
-                        console.log(`${index.name} targetPE动态计算: 乐观(70%分位)=${sorted[p70idx].toFixed(2)}, 中性(当前)=${index.currentPE.toFixed(2)}, 悲观(30%分位)=${sorted[p30idx].toFixed(2)}`);
+                        console.log(`${index.name} targetPE动态计算: 乐观(70%分位)=${sorted[p70idx].toFixed(2)}, 中性(50%分位)=${sorted[p50idx].toFixed(2)}, 悲观(30%分位)=${sorted[p30idx].toFixed(2)}`);
                     }
                 });
 
@@ -1025,7 +1026,7 @@
                                 年化收益率 = (期末市值 / 初始市值)^(1/年数) - 1
                             </div>
                             <div class="text-sm text-gray-300 space-y-2">
-                                <p><strong>当前场景：${currentTab === 'undervalued' ? '乐观（PE回到高估区间）' : currentTab === 'fair' ? '中性（PE保持不变）' : '悲观（PE回到低估区间）'}</strong></p>
+                                <p><strong>当前场景：${currentTab === 'undervalued' ? '乐观（PE回到高估区间）' : currentTab === 'fair' ? '中性（PE回到合理区间）' : '悲观（PE回到低估区间）'}</strong></p>
                                 <p>• 保留收益增长（ROE×留存率）：${retainedEarningsPercent}%/年</p>
                                 <p>• PE变化：${index.currentPE} → ${targetPE}（${peChangePercent}%/年）</p>
                                 <p class="font-bold text-green-400 mt-2">合计年化收益：${totalPercent}%</p>
@@ -1112,7 +1113,7 @@
                             <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证医疗、中证白酒），与雪球估值数据来源一致。</li>
                             <li>• <strong>数据质量说明</strong>：中证白酒等部分行业指数原始数据包含插值点，系统已自动检测并应用相应处理（过滤周末/降频显示/平滑曲线），以提供更真实的估值走势参考。</li>
                             <li>• <strong>PE分位数</strong>：基于各指数全量历史日度数据计算（沪深300等主要指数从2011年起），分位线在切换近3/5/10年时保持不变，代表绝对历史水平</li>
-                            <li>• <strong>收益预测场景</strong>：乐观 = PE回到历史70%分位（高估区间）；中性 = PE保持当前水平；悲观 = PE回到历史30%分位（低估区间）</li>
+                            <li>• <strong>收益预测场景</strong>：乐观 = PE回到历史70%分位（高估区间）；中性 = PE回到历史50%分位（合理区间）；悲观 = PE回到历史30%分位（低估区间）</li>
                             <li>• <strong>ROE / 股息率</strong>：参考中证指数官网及蛋卷基金数据，每周更新一次</li>
                             <li>• 预测基于等雨来策略模型，不构成投资建议</li>
                             <li>• 实际收益可能因市场波动、宏观经济、政策变化等因素偏离预测</li>
@@ -2166,7 +2167,7 @@
                                 tension: 0.4
                             },
                             {
-                                label: '中性（PE保持不变）',
+                                label: '中性（PE回合理区间）',
                                 data: [1, 3, 5, 10].map(y => index.predictions.fair ? index.predictions.fair[y] : null),
                                 borderColor: '#f59e0b',
                                 backgroundColor: 'rgba(245, 158, 11, 0.1)',
