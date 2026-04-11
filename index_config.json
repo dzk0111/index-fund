@@ -1,6 +1,8 @@
 {
   "update_date": "2026-04-10",
   "description": "指数基金辅助工具手动配置数据（PB/ROE/股息率等），PE数据自动获取无需在此维护",
+  "admin_password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+  "change_history": [],
   "indices": {
     "hs300": {
       "name": "沪深300",
