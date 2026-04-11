@@ -264,6 +264,7 @@
         // JSON格式：{ id: { name, dates[], pe_values[], is_real_data, data_source, latest_pe, latest_date } }
         let realPEHistoryData = null;
         let dataQualityReport = null; // 数据质量报告
+        let indexConfigData = null;   // 手动配置数据（PB/ROE/股息率）
         
         // 加载数据质量报告
         async function loadDataQualityReport() {
@@ -546,6 +547,17 @@
                     }
                 });
                 
+                // ✅ 从真实历史数据动态计算PE分位数（保留两位小数）
+                indexData.forEach(index => {
+                    if (index.realPEHistory && index.realPEHistory.length > 0) {
+                        const sorted = [...index.realPEHistory].sort((a, b) => a - b);
+                        const rank = sorted.filter(v => v <= index.currentPE).length;
+                        const percentile = (rank / sorted.length * 100).toFixed(2);
+                        index.pePercentile = parseFloat(percentile);
+                        console.log(`${index.name} PE分位动态计算: PE=${index.currentPE}, 排名${rank}/${sorted.length}, 分位=${percentile}%`);
+                    }
+                });
+
                 // ✅ 重新计算所有指数的预测数据（因为PE值已更新）
                 indexData.forEach(updatePredictions);
                 console.log('预测数据已重新计算（基于最新的PE值）');
@@ -554,6 +566,37 @@
             } catch (error) {
                 console.log('未找到PE历史数据文件，使用年数据插值');
                 console.log('  运行 fetch_pe_real.py 可生成真实数据');
+                return false;
+            }
+        }
+
+        // 加载手动配置数据（PB/ROE/股息率等）
+        async function loadIndexConfig() {
+            try {
+                const response = await fetch('index_config.json');
+                indexConfigData = await response.json();
+                console.log('配置文件加载成功，更新日期:', indexConfigData.update_date);
+
+                // 用配置文件中的数据覆盖 indexData 中的硬编码值
+                if (indexConfigData.indices) {
+                    indexData.forEach(index => {
+                        const config = indexConfigData.indices[index.id];
+                        if (config) {
+                            if (config.currentPB !== undefined) index.currentPB = config.currentPB;
+                            if (config.pbPercentile !== undefined) index.pbPercentile = config.pbPercentile;
+                            if (config.dividendRate !== undefined) index.dividendRate = config.dividendRate;
+                            if (config.roe !== undefined) index.roe = config.roe;
+                            console.log(`${index.name}: 从配置文件更新 PB=${config.currentPB}, ROE=${config.roe}, 股息率=${config.dividendRate}`);
+                        }
+                    });
+                    // 重新计算预测数据
+                    indexData.forEach(updatePredictions);
+                    console.log('配置数据已应用，预测数据已重新计算');
+                }
+
+                return true;
+            } catch (error) {
+                console.log('未找到配置文件 index_config.json，使用默认数据');
                 return false;
             }
         }
@@ -776,7 +819,7 @@
                         </h1>
                         <p class="text-gray-400 text-lg mb-2">基于等雨来策略，预测指数基金未来收益</p>
                         <div class="text-sm text-gray-500">
-                            📅 数据更新日期：${getLatestDataDate()} | 数据来源：中证指数官网（csindex.com.cn）全部真实日度PE
+                            📅 PE数据更新：${getLatestDataDate()} | PB/ROE/股息率更新：${indexConfigData ? indexConfigData.update_date : '默认值'}
                         </div>
                         <div class="mt-4 flex items-center justify-center gap-4">
                             <button onclick="showQualityReport()" class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
@@ -813,15 +856,15 @@
                                     <div class="space-y-1.5 text-xs mb-3">
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">PE:</span>
-                                            <span class="text-white font-medium">${index.currentPE}</span>
+                                            <span class="text-white font-medium">${index.currentPE.toFixed(2)}</span>
                                         </div>
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">PE分位:</span>
-                                            <span class="text-white font-medium">${index.pePercentile}%</span>
+                                            <span class="text-white font-medium">${index.pePercentile.toFixed(2)}%</span>
                                         </div>
                                         <div class="flex justify-between">
                                             <span class="text-gray-400">ROE:</span>
-                                            <span class="text-white font-medium">${(index.roe * 100).toFixed(1)}%</span>
+                                            <span class="text-white font-medium">${(index.roe * 100).toFixed(2)}%</span>
                                         </div>
                                     </div>
                                     <div class="h-[120px] bg-slate-900/50 rounded-lg p-2">
@@ -890,23 +933,23 @@
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">PE</div>
-                                <div class="text-2xl font-bold text-white">${index.currentPE}</div>
+                                <div class="text-2xl font-bold text-white">${index.currentPE.toFixed(2)}</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">PE分位数</div>
-                                <div class="text-2xl font-bold ${getReturnColor(100 - index.pePercentile, 'total')}">${index.pePercentile}%</div>
+                                <div class="text-2xl font-bold ${getReturnColor(100 - index.pePercentile, 'total')}">${index.pePercentile.toFixed(2)}%</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">PB</div>
-                                <div class="text-2xl font-bold text-white">${index.currentPB}</div>
+                                <div class="text-2xl font-bold text-white">${index.currentPB.toFixed(2)}</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">ROE</div>
-                                <div class="text-2xl font-bold text-white">${(index.roe * 100).toFixed(1)}%</div>
+                                <div class="text-2xl font-bold text-white">${(index.roe * 100).toFixed(2)}%</div>
                             </div>
                             <div class="text-center">
                                 <div class="text-gray-400 text-sm mb-1">股息率</div>
-                                <div class="text-2xl font-bold text-white">${(index.dividendRate * 100).toFixed(1)}%</div>
+                                <div class="text-2xl font-bold text-white">${(index.dividendRate * 100).toFixed(2)}%</div>
                             </div>
                         </div>
                         <div class="mt-4 p-4 bg-slate-700/50 rounded-xl">
@@ -2185,6 +2228,8 @@
         document.addEventListener('DOMContentLoaded', async () => {
             // 尝试加载真实的PE历史数据
             await loadRealPEHistory();
+            // 加载手动配置数据（PB/ROE/股息率）
+            await loadIndexConfig();
             // 加载数据质量报告
             await loadDataQualityReport();
             // 显示首页
