@@ -656,45 +656,6 @@
                 status: null
             },
             {
-                id: 'cyb',
-                name: '创业板50',
-                code: '930743',
-                currentPE: null,
-                pePercentile: null,
-                currentPB: null,
-                pbPercentile: null,
-                dividendRate: null,
-                roe: null,
-                targetPE: null,
-                status: null
-            },
-            {
-                id: 'zzyl',
-                name: '中证医疗',
-                code: '399989',
-                currentPE: null,
-                pePercentile: null,
-                currentPB: null,
-                pbPercentile: null,
-                dividendRate: null,
-                roe: null,
-                targetPE: null,
-                status: null
-            },
-            {
-                id: 'zzbj',
-                name: '中证白酒',
-                code: '399997',
-                currentPE: null,
-                pePercentile: null,
-                currentPB: null,
-                pbPercentile: null,
-                dividendRate: null,
-                roe: null,
-                targetPE: null,
-                status: null
-            },
-            {
                 id: 'zz500',
                 name: '中证500',
                 code: '000905',
@@ -721,35 +682,9 @@
                 status: null
             },
             {
-                id: 'fdcre',
-                name: '中证地产',
-                code: '000975',
-                currentPE: null,
-                pePercentile: null,
-                currentPB: null,
-                pbPercentile: null,
-                dividendRate: null,
-                roe: null,
-                targetPE: null,
-                status: null
-            },
-            {
                 id: 'kc50',
-                name: '科创板50',
+                name: '科创50',
                 code: '000688',
-                currentPE: null,
-                pePercentile: null,
-                currentPB: null,
-                pbPercentile: null,
-                dividendRate: null,
-                roe: null,
-                targetPE: null,
-                status: null
-            },
-            {
-                id: 'xny',
-                name: '中证新能源',
-                code: '931151',
                 currentPE: null,
                 pePercentile: null,
                 currentPB: null,
@@ -763,6 +698,71 @@
                 id: 'zzhl',
                 name: '中证红利',
                 code: '000922',
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
+            },
+            {
+                id: 'zz1000',
+                name: '中证1000',
+                code: '000852',
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
+            },
+            {
+                id: 'zzxf',
+                name: '中证消费',
+                code: '000932',
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
+            },
+            {
+                id: 'zzyh',
+                name: '中证银行',
+                code: '399986',
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
+            },
+            {
+                id: 'zzyl',
+                name: '中证医疗',
+                code: '399989',
+                currentPE: null,
+                pePercentile: null,
+                currentPB: null,
+                pbPercentile: null,
+                dividendRate: null,
+                roe: null,
+                targetPE: null,
+                status: null
+            },
+            {
+                id: 'zzbj',
+                name: '中证白酒',
+                code: '399997',
                 currentPE: null,
                 pePercentile: null,
                 currentPB: null,
@@ -1126,7 +1126,7 @@
                             <li>• <strong>等雨来策略</strong>：根据ROE、分红率、PE值计算市值变化，得出年化收益率</li>
                             <li>• <strong>市值计算</strong>：市值 = PE × (净资产 × ROE)，净资产通过保留收益（ROE×留存率）复利增长</li>
                             <li>• <strong>年化收益率</strong>：(期末市值/初始市值)^(1/年数) - 1</li>
-                            <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证医疗、中证白酒），与雪球估值数据来源一致。</li>
+                            <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证消费、中证银行、中证医疗、中证白酒），与雪球估值数据来源一致。</li>
                             <li>• <strong>数据质量说明</strong>：中证白酒等部分行业指数原始数据包含插值点，系统已自动检测并应用相应处理（过滤周末/降频显示/平滑曲线），以提供更真实的估值走势参考。</li>
                             <li>• <strong>PE分位数</strong>：基于各指数全量历史日度数据计算（沪深300等主要指数从2011年起），分位线在切换近3/5/10年时保持不变，代表绝对历史水平</li>
                             <li>• <strong>收益预测场景</strong>：乐观 = PE回到历史70%分位（高估区间）；中性 = PE回到历史50%分位（合理区间）；悲观 = PE回到历史30%分位（低估区间）</li>
