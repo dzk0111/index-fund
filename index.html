@@ -560,15 +560,32 @@
                     }
                 });
                 
-                // ✅ 从真实历史数据动态计算PE分位数、status、targetPE
+                // ✅ 从真实历史数据动态计算PE分位数、status、targetPE（近10年滚动窗口）
                 indexData.forEach(index => {
                     if (index.realPEHistory && index.realPEHistory.length > 0) {
-                        const sorted = [...index.realPEHistory].sort((a, b) => a - b);
+                        // 取近10年数据（滚动窗口，历史不足10年的用全部数据）
+                        const tenYearsAgo = new Date();
+                        tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+                        let peForCalc = index.realPEHistory;
+                        let datesForCalc = index.realPEHistoryDates;
+                        const filtered10Y = [];
+                        for (let i = 0; i < datesForCalc.length; i++) {
+                            if (new Date(datesForCalc[i]) >= tenYearsAgo) {
+                                filtered10Y.push(peForCalc[i]);
+                            }
+                        }
+                        if (filtered10Y.length >= 100) {
+                            peForCalc = filtered10Y;
+                        }
+                        // 记录实际取值年限
+                        index.pePercentileYears = peForCalc.length;
+
+                        const sorted = [...peForCalc].sort((a, b) => a - b);
                         // PE分位数
                         const rank = sorted.filter(v => v <= index.currentPE).length;
                         const percentile = (rank / sorted.length * 100).toFixed(2);
                         index.pePercentile = parseFloat(percentile);
-                        console.log(`${index.name} PE分位动态计算: PE=${index.currentPE}, 排名${rank}/${sorted.length}, 分位=${percentile}%`);
+                        console.log(`${index.name} PE分位动态计算(近10年): PE=${index.currentPE}, 排名${rank}/${sorted.length}, 分位=${percentile}%`);
 
                         // 动态计算 status：基于 PE分位数
                         if (index.pePercentile < 30) {
@@ -579,7 +596,7 @@
                             index.status = 'fair';
                         }
 
-                        // 动态计算 targetPE：基于历史分位线
+                        // 动态计算 targetPE：基于近10年分位线
                         const p30idx = Math.floor(sorted.length * 30 / 100);
                         const p50idx = Math.floor(sorted.length * 50 / 100);
                         const p70idx = Math.floor(sorted.length * 70 / 100);
@@ -878,7 +895,7 @@
                                             <span class="text-white font-medium">${index.currentPE.toFixed(2)}</span>
                                         </div>
                                         <div class="flex justify-between">
-                                            <span class="text-gray-400">PE分位:</span>
+                                            <span class="text-gray-400">PE分位(近10年):</span>
                                             <span class="text-white font-medium">${index.pePercentile != null ? index.pePercentile.toFixed(2) + '%' : '--'}</span>
                                         </div>
                                         <div class="flex justify-between">
@@ -959,7 +976,7 @@
                                 <div class="text-2xl font-bold text-white">${index.currentPE.toFixed(2)}</div>
                             </div>
                             <div class="text-center">
-                                <div class="text-gray-400 text-sm mb-1">PE分位数</div>
+                                <div class="text-gray-400 text-sm mb-1">PE分位数(近10年)</div>
                                 <div class="text-2xl font-bold ${index.pePercentile != null ? getReturnColor(100 - index.pePercentile, 'total') : ''}">${index.pePercentile != null ? index.pePercentile.toFixed(2) + '%' : '--'}</div>
                             </div>
                             <div class="text-center">
@@ -1128,7 +1145,7 @@
                             <li>• <strong>年化收益率</strong>：(期末市值/初始市值)^(1/年数) - 1</li>
                             <li>• <strong>历史PE走势</strong>：全部指数均来自<strong>中证指数官网（csindex.com.cn）</strong>真实日度数据，最早可追溯至2011年，覆盖所有10个指数（含行业指数如中证消费、中证银行、中证医疗、中证白酒），与雪球估值数据来源一致。</li>
                             <li>• <strong>数据质量说明</strong>：中证白酒等部分行业指数原始数据包含插值点，系统已自动检测并应用相应处理（过滤周末/降频显示/平滑曲线），以提供更真实的估值走势参考。</li>
-                            <li>• <strong>PE分位数</strong>：基于各指数全量历史日度数据计算（沪深300等主要指数从2011年起），分位线在切换近3/5/10年时保持不变，代表绝对历史水平</li>
+                            <li>• <strong>PE分位数</strong>：基于各指数<strong>近10年</strong>日度数据滚动计算（历史不足10年的用全部数据），每年自动向前滚动；收益预测的乐观/中性/悲观目标PE也基于近10年分位线</li>
                             <li>• <strong>收益预测场景</strong>：乐观 = PE回到历史70%分位（高估区间）；中性 = PE回到历史50%分位（合理区间）；悲观 = PE回到历史30%分位（低估区间）</li>
                             <li>• <strong>ROE / 股息率</strong>：参考中证指数官网及蛋卷基金数据，每周更新一次</li>
                             <li>• 预测基于等雨来策略模型，不构成投资建议</li>
