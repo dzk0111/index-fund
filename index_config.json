@@ -1,5 +1,5 @@
 {
-  "update_date": "2026-04-17",
+  "update_date": "2026-04-20",
   "description": "指数基金辅助工具手动配置数据",
   "admin_password_hash": "",
   "change_history": [
@@ -114,6 +114,104 @@
       "field": "roe",
       "old_value": "0.2657",
       "new_value": "0.2654"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "沪深300",
+      "field": "roe",
+      "old_value": "0.1021",
+      "new_value": "0.102"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证500",
+      "field": "currentPB",
+      "old_value": "2.53",
+      "new_value": "2.54"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证500",
+      "field": "roe",
+      "old_value": "0.0694",
+      "new_value": "0.0695"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "上证50",
+      "field": "roe",
+      "old_value": "0.1076",
+      "new_value": "0.1072"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "科创50",
+      "field": "currentPB",
+      "old_value": "6.38",
+      "new_value": "6.41"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "科创50",
+      "field": "roe",
+      "old_value": "0.0402",
+      "new_value": "0.0401"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证1000",
+      "field": "currentPB",
+      "old_value": "2.7",
+      "new_value": "2.72"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证1000",
+      "field": "roe",
+      "old_value": "0.054",
+      "new_value": "0.0544"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "主要消费",
+      "field": "currentPB",
+      "old_value": "3.91",
+      "new_value": "3.77"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "主要消费",
+      "field": "roe",
+      "old_value": "0.1988",
+      "new_value": "0.1895"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证医疗",
+      "field": "currentPB",
+      "old_value": "3.32",
+      "new_value": "3.25"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证医疗",
+      "field": "roe",
+      "old_value": "0.1123",
+      "new_value": "0.1125"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证白酒",
+      "field": "currentPB",
+      "old_value": "4.81",
+      "new_value": "4.53"
+    },
+    {
+      "date": "2026-04-20",
+      "index_name": "中证白酒",
+      "field": "roe",
+      "old_value": "0.2654",
+      "new_value": "0.245"
     }
   ],
   "indices": {
@@ -121,28 +219,28 @@
       "name": "沪深300",
       "code": "000300",
       "currentPB": 1.47,
-      "roe": 0.1021,
+      "roe": 0.102,
       "dividendRate": 0.032
     },
     "zz500": {
       "name": "中证500",
       "code": "000905",
-      "currentPB": 2.53,
-      "roe": 0.0694,
+      "currentPB": 2.54,
+      "roe": 0.0695,
       "dividendRate": 0.0118
     },
     "sz50": {
       "name": "上证50",
       "code": "000016",
       "currentPB": 1.23,
-      "roe": 0.1076,
+      "roe": 0.1072,
       "dividendRate": 0.0429
     },
     "kc50": {
       "name": "科创50",
       "code": "000688",
-      "currentPB": 6.38,
-      "roe": 0.0402,
+      "currentPB": 6.41,
+      "roe": 0.0401,
       "dividendRate": 0.0043
     },
     "zzhl": {
@@ -155,15 +253,15 @@
     "zz1000": {
       "name": "中证1000",
       "code": "000852",
-      "currentPB": 2.7,
-      "roe": 0.054,
+      "currentPB": 2.72,
+      "roe": 0.0544,
       "dividendRate": 0.0099
     },
     "zzxf": {
       "name": "主要消费",
       "code": "000932",
-      "currentPB": 3.91,
-      "roe": 0.1988,
+      "currentPB": 3.77,
+      "roe": 0.1895,
       "dividendRate": 0.0349
     },
     "zzyh": {
@@ -176,15 +274,15 @@
     "zzyl": {
       "name": "中证医疗",
       "code": "399989",
-      "currentPB": 3.32,
-      "roe": 0.1123,
+      "currentPB": 3.25,
+      "roe": 0.1125,
       "dividendRate": 0.0084
     },
     "zzbj": {
       "name": "中证白酒",
       "code": "399997",
-      "currentPB": 4.81,
-      "roe": 0.2654,
+      "currentPB": 4.53,
+      "roe": 0.245,
       "dividendRate": 0.0395
     }
   }
