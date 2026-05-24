@@ -2242,6 +2242,127 @@
 
         // ==================== 管理面板 ====================
 
+        // ── PE 手动更新（GitHub Actions 触发）──────────────────
+        const GH_REPO = 'dzk0111/index-fund';
+        const GH_WORKFLOW_ID = '258855387';
+
+        function saveGhToken(val) {
+            if (val && val.startsWith('ghp_')) {
+                localStorage.setItem('ghToken', val);
+                document.getElementById('token-status').textContent = '✅ 已保存';
+            } else if (!val) {
+                localStorage.removeItem('ghToken');
+                document.getElementById('token-status').textContent = '';
+            } else {
+                document.getElementById('token-status').textContent = '⚠️ 格式不对';
+            }
+        }
+
+        function initGhTokenInput() {
+            const saved = localStorage.getItem('ghToken');
+            const input = document.getElementById('gh-token-input');
+            if (saved && input) {
+                input.value = saved;
+                document.getElementById('token-status').textContent = '✅ 已保存';
+            }
+        }
+
+        function setPEUpdateStatus(icon, text, showLink, runUrl) {
+            const box = document.getElementById('pe-update-status');
+            box.classList.remove('hidden');
+            document.getElementById('pe-status-icon').textContent = icon;
+            document.getElementById('pe-status-text').textContent = text;
+            const linkBox = document.getElementById('pe-status-link');
+            if (showLink && runUrl) {
+                linkBox.classList.remove('hidden');
+                document.getElementById('pe-actions-link').href = runUrl;
+            } else {
+                linkBox.classList.add('hidden');
+            }
+        }
+
+        async function triggerPEUpdate(mode) {
+            const token = localStorage.getItem('ghToken');
+            if (!token) {
+                setPEUpdateStatus('⚠️', '请先填写 GitHub Token（在上方输入框）', false, null);
+                document.getElementById('gh-token-input').focus();
+                return;
+            }
+
+            const btnUpdate = document.getElementById('btn-pe-update');
+            const btnForce = document.getElementById('btn-pe-force');
+            btnUpdate.disabled = true;
+            btnForce.disabled = true;
+            btnUpdate.classList.add('opacity-50');
+            btnForce.classList.add('opacity-50');
+
+            const modeLabel = mode === 'full' ? '全量重新抓取' : '增量更新';
+            setPEUpdateStatus('⏳', `正在触发 GitHub Actions（${modeLabel}）...`, false, null);
+
+            try {
+                const resp = await fetch(
+                    `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WORKFLOW_ID}/dispatches`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ ref: 'main', inputs: { update_mode: mode } })
+                    }
+                );
+
+                if (resp.status === 204) {
+                    setPEUpdateStatus('🚀', `已成功触发（${modeLabel}）！GitHub Actions 正在运行，约2-5分钟后网站数据更新，届时刷新页面即可。`, true,
+                        `https://github.com/${GH_REPO}/actions`);
+                    // 10秒后轮询一次运行状态
+                    setTimeout(() => pollLatestRun(token), 10000);
+                } else if (resp.status === 401) {
+                    setPEUpdateStatus('❌', 'Token 无效或已过期，请重新填写', false, null);
+                } else if (resp.status === 403) {
+                    setPEUpdateStatus('❌', 'Token 权限不足，需要 repo + workflow 权限', false, null);
+                } else {
+                    const body = await resp.text();
+                    setPEUpdateStatus('❌', `触发失败（${resp.status}）：${body.slice(0, 100)}`, false, null);
+                }
+            } catch (e) {
+                setPEUpdateStatus('❌', `网络错误：${e.message}`, false, null);
+            } finally {
+                btnUpdate.disabled = false;
+                btnForce.disabled = false;
+                btnUpdate.classList.remove('opacity-50');
+                btnForce.classList.remove('opacity-50');
+            }
+        }
+
+        async function pollLatestRun(token) {
+            try {
+                const resp = await fetch(
+                    `https://api.github.com/repos/${GH_REPO}/actions/workflows/${GH_WORKFLOW_ID}/runs?per_page=1`,
+                    { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }
+                );
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const run = data.workflow_runs && data.workflow_runs[0];
+                if (!run) return;
+                const status = run.status;
+                const conclusion = run.conclusion;
+                const runUrl = run.html_url;
+                if (status === 'completed') {
+                    if (conclusion === 'success') {
+                        setPEUpdateStatus('✅', '更新完成！刷新页面即可看到最新PE数据。', true, runUrl);
+                    } else {
+                        setPEUpdateStatus('❌', `Actions 运行失败（${conclusion}），请点击链接查看详情。`, true, runUrl);
+                    }
+                } else {
+                    setPEUpdateStatus('⏳', `Actions 运行中（${status}）…约1-3分钟后完成，完成后刷新页面。`, true, runUrl);
+                    setTimeout(() => pollLatestRun(token), 20000);
+                }
+            } catch (e) { /* 轮询失败静默忽略 */ }
+        }
+        // ────────────────────────────────────────────────────────
+
         // SHA-256 哈希函数
         async function sha256(message) {
             const msgBuffer = new TextEncoder().encode(message);
@@ -2287,6 +2408,8 @@
                 return;
             }
             document.getElementById('app').innerHTML = renderAdminPage();
+            // 恢复已保存的 Token 到输入框
+            initGhTokenInput();
         }
 
         // 渲染管理员登录页
@@ -2362,7 +2485,7 @@
                     <div class="flex items-center justify-between mb-6 sticky-header">
                         <div>
                             <h1 class="text-2xl font-bold gradient-text">⚙️ 数据管理面板</h1>
-                            <p class="text-gray-400 text-sm mt-1">PB / ROE / 股息率 手动更新（PE数据自动获取无需修改）</p>
+                            <p class="text-gray-400 text-sm mt-1">PB / ROE / 股息率 手动更新 | PE数据可一键触发更新</p>
                         </div>
                         <div class="flex gap-3">
                             <button onclick="showHomePage()"
@@ -2373,6 +2496,46 @@
                                 class="px-4 py-2 bg-red-900/50 hover:bg-red-800/50 text-red-400 rounded-xl text-sm transition-colors">
                                 退出登录
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- PE 手动更新区 -->
+                    <div class="bg-slate-800/60 backdrop-blur border border-slate-700 rounded-2xl p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-white">🔄 手动触发PE数据更新</h2>
+                                <p class="text-gray-400 text-xs mt-1">通过 GitHub Actions 在服务器端重新抓取最新PE数据并自动发布</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="triggerPEUpdate('incremental')"
+                                    id="btn-pe-update"
+                                    class="px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
+                                    <span>🔄</span><span>更新PE数据</span>
+                                </button>
+                                <button onclick="triggerPEUpdate('full')"
+                                    id="btn-pe-force"
+                                    class="px-4 py-2 bg-orange-700/60 hover:bg-orange-600/60 text-orange-200 rounded-xl text-sm transition-colors flex items-center gap-2">
+                                    <span>⚡</span><span>强制全量</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Token 配置行 -->
+                        <div class="flex items-center gap-3 mb-3">
+                            <label class="text-gray-400 text-xs whitespace-nowrap">GitHub Token</label>
+                            <input type="password" id="gh-token-input" placeholder="ghp_xxxx（仅存本地，不上传）"
+                                class="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs focus:outline-none focus:border-green-500 font-mono"
+                                oninput="saveGhToken(this.value)">
+                            <span class="text-gray-500 text-xs" id="token-status"></span>
+                        </div>
+                        <!-- 状态显示 -->
+                        <div id="pe-update-status" class="hidden mt-3 p-3 rounded-xl bg-slate-700/50 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span id="pe-status-icon">⏳</span>
+                                <span id="pe-status-text" class="text-gray-300"></span>
+                            </div>
+                            <div id="pe-status-link" class="mt-1 hidden">
+                                <a href="#" target="_blank" id="pe-actions-link" class="text-blue-400 hover:text-blue-300 text-xs underline">在 GitHub Actions 查看进度 →</a>
+                            </div>
                         </div>
                     </div>
 
