@@ -1,64 +1,8 @@
 {
-  "update_date": "2026-07-08",
+  "update_date": "2026-07-10",
   "description": "指数基金辅助工具手动配置数据",
   "admin_password_hash": "",
   "change_history": [
-    {
-      "date": "2026-06-29",
-      "index_name": "中证红利",
-      "field": "roe",
-      "old_value": "0.0965",
-      "new_value": "0.0967"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "中证1000",
-      "field": "currentPB",
-      "old_value": "2.8",
-      "new_value": "2.73"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "主要消费",
-      "field": "currentPB",
-      "old_value": "3.11",
-      "new_value": "3.13"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "主要消费",
-      "field": "roe",
-      "old_value": "0.1638",
-      "new_value": "0.1688"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "中证医疗",
-      "field": "currentPB",
-      "old_value": "3.07",
-      "new_value": "3.01"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "中证医疗",
-      "field": "roe",
-      "old_value": "0.1125",
-      "new_value": "0.1127"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "中证白酒",
-      "field": "currentPB",
-      "old_value": "3.6",
-      "new_value": "3.68"
-    },
-    {
-      "date": "2026-06-29",
-      "index_name": "中证白酒",
-      "field": "roe",
-      "old_value": "0.1964",
-      "new_value": "0.2079"
-    },
     {
       "date": "2026-06-30",
       "index_name": "沪深300",
@@ -352,34 +296,90 @@
       "field": "currentPB",
       "old_value": "3.8",
       "new_value": "3.73"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "沪深300",
+      "field": "currentPB",
+      "old_value": "1.45",
+      "new_value": "1.47"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "中证500",
+      "field": "currentPB",
+      "old_value": "2.67",
+      "new_value": "2.71"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "上证50",
+      "field": "currentPB",
+      "old_value": "1.21",
+      "new_value": "1.23"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "上证50",
+      "field": "roe",
+      "old_value": "0.1076",
+      "new_value": "0.1077"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "科创50",
+      "field": "currentPB",
+      "old_value": "9.43",
+      "new_value": "10.46"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "主要消费",
+      "field": "currentPB",
+      "old_value": "3.23",
+      "new_value": "3.19"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "中证医疗",
+      "field": "currentPB",
+      "old_value": "3.11",
+      "new_value": "3.13"
+    },
+    {
+      "date": "2026-07-10",
+      "index_name": "中证白酒",
+      "field": "currentPB",
+      "old_value": "3.73",
+      "new_value": "3.69"
     }
   ],
   "indices": {
     "hs300": {
       "name": "沪深300",
       "code": "000300",
-      "currentPB": 1.45,
+      "currentPB": 1.47,
       "roe": 0.1011,
       "dividendRate": 0.032
     },
     "zz500": {
       "name": "中证500",
       "code": "000905",
-      "currentPB": 2.67,
+      "currentPB": 2.71,
       "roe": 0.067,
       "dividendRate": 0.0118
     },
     "sz50": {
       "name": "上证50",
       "code": "000016",
-      "currentPB": 1.21,
-      "roe": 0.1076,
+      "currentPB": 1.23,
+      "roe": 0.1077,
       "dividendRate": 0.0429
     },
     "kc50": {
       "name": "科创50",
       "code": "000688",
-      "currentPB": 9.43,
+      "currentPB": 10.46,
       "roe": 0.0396,
       "dividendRate": 0.0043
     },
@@ -400,7 +400,7 @@
     "zzxf": {
       "name": "主要消费",
       "code": "000932",
-      "currentPB": 3.23,
+      "currentPB": 3.19,
       "roe": 0.1692,
       "dividendRate": 0.0349
     },
@@ -414,14 +414,14 @@
     "zzyl": {
       "name": "中证医疗",
       "code": "399989",
-      "currentPB": 3.11,
+      "currentPB": 3.13,
       "roe": 0.1126,
       "dividendRate": 0.0084
     },
     "zzbj": {
       "name": "中证白酒",
       "code": "399997",
-      "currentPB": 3.73,
+      "currentPB": 3.69,
       "roe": 0.2087,
       "dividendRate": 0.0395
     }
