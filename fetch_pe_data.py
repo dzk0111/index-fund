@@ -173,5 +173,37 @@ def main():
     else:
         print('all done!')
 
+
+
+def _ci_sync_pbroe_and_commit():
+    """云端流水线补充：抓取 PB/ROE(蛋卷) 并提交，使现有工作流的 git push 一并推送。
+    仅在 git 仓库内生效；本地非 git 目录会静默跳过，不影响本地任务。"""
+    try:
+        import subprocess, os
+        # 1) 抓取蛋卷 PB/ROE -> index_config.json
+        try:
+            subprocess.run([sys.executable, 'fetch_danjuan_data.py'],
+                           check=False, stdout=sys.stdout, stderr=sys.stderr)
+        except Exception as e:
+            print(f'[WARN] 蛋卷 PB/ROE 抓取失败（不影响 PE）：{e}')
+        # 2) 提交（仅当处于 git 仓库）
+        top = os.path.dirname(os.path.abspath(__file__))
+        if not os.path.exists(os.path.join(top, '.git')):
+            return
+        subprocess.run(['git', 'add', 'index_config.json', 'index_pe_history.json',
+                        'update_logs.json', 'data_quality_report.json'],
+                       cwd=top, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        diff = subprocess.run(['git', 'diff', '--cached', '--quiet'], cwd=top, check=False)
+        if diff.returncode != 0:
+            today = datetime.now().strftime('%Y-%m-%d')
+            subprocess.run(['git', 'commit', '-m', f'\u81ea\u52a8\u66f4\u65b0\u6307\u6570\u4f30\u503c\u6570\u636e - {today}'],
+                           cwd=top, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f'[WARN] CI \u540c\u6b65\u63d0\u4ea4\u8df3\u8fc7\uff1a{e}')
+
+
 if __name__ == '__main__':
     main()
+    _ci_sync_pbroe_and_commit()
