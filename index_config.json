@@ -1,78 +1,8 @@
 {
-  "update_date": "2026-09-11",
+  "update_date": "2026-09-14",
   "description": "指数基金辅助工具手动配置数据",
   "admin_password_hash": "",
   "change_history": [
-    {
-      "date": "2026-09-02",
-      "index_name": "上证50",
-      "field": "currentPB",
-      "old_value": "1.25",
-      "new_value": "1.26"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "科创50",
-      "field": "currentPB",
-      "old_value": "7.87",
-      "new_value": "7.71"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "中证1000",
-      "field": "currentPB",
-      "old_value": "2.45",
-      "new_value": "2.42"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "主要消费",
-      "field": "currentPB",
-      "old_value": "3.45",
-      "new_value": "3.48"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "中证银行",
-      "field": "currentPB",
-      "old_value": "0.69",
-      "new_value": "0.7"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "中证医疗",
-      "field": "currentPB",
-      "old_value": "3.46",
-      "new_value": "3.47"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "中证医疗",
-      "field": "roe",
-      "old_value": "0.1153",
-      "new_value": "0.1154"
-    },
-    {
-      "date": "2026-09-02",
-      "index_name": "中证白酒",
-      "field": "currentPB",
-      "old_value": "4.04",
-      "new_value": "4.07"
-    },
-    {
-      "date": "2026-09-04",
-      "index_name": "沪深300",
-      "field": "currentPB",
-      "old_value": "1.45",
-      "new_value": "1.44"
-    },
-    {
-      "date": "2026-09-04",
-      "index_name": "中证500",
-      "field": "currentPB",
-      "old_value": "2.43",
-      "new_value": "2.4"
-    },
     {
       "date": "2026-09-04",
       "index_name": "上证50",
@@ -352,20 +282,90 @@
       "field": "currentPB",
       "old_value": "4.12",
       "new_value": "4.0"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "沪深300",
+      "field": "currentPB",
+      "old_value": "1.43",
+      "new_value": "1.42"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证500",
+      "field": "currentPB",
+      "old_value": "2.39",
+      "new_value": "2.35"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "科创50",
+      "field": "currentPB",
+      "old_value": "7.17",
+      "new_value": "7.09"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证红利",
+      "field": "currentPB",
+      "old_value": "0.86",
+      "new_value": "0.85"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证1000",
+      "field": "currentPB",
+      "old_value": "2.39",
+      "new_value": "2.34"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证1000",
+      "field": "roe",
+      "old_value": "0.055",
+      "new_value": "0.0549"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "主要消费",
+      "field": "currentPB",
+      "old_value": "3.43",
+      "new_value": "3.4"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证医疗",
+      "field": "currentPB",
+      "old_value": "3.44",
+      "new_value": "3.38"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证白酒",
+      "field": "currentPB",
+      "old_value": "4.0",
+      "new_value": "3.96"
+    },
+    {
+      "date": "2026-09-14",
+      "index_name": "中证白酒",
+      "field": "roe",
+      "old_value": "0.2007",
+      "new_value": "0.2008"
     }
   ],
   "indices": {
     "hs300": {
       "name": "沪深300",
       "code": "000300",
-      "currentPB": 1.43,
+      "currentPB": 1.42,
       "roe": 0.1054,
       "dividendRate": 0.032
     },
     "zz500": {
       "name": "中证500",
       "code": "000905",
-      "currentPB": 2.39,
+      "currentPB": 2.35,
       "roe": 0.0725,
       "dividendRate": 0.0118
     },
@@ -379,28 +379,28 @@
     "kc50": {
       "name": "科创50",
       "code": "000688",
-      "currentPB": 7.17,
+      "currentPB": 7.09,
       "roe": 0.054,
       "dividendRate": 0.0043
     },
     "zzhl": {
       "name": "中证红利",
       "code": "000922",
-      "currentPB": 0.86,
+      "currentPB": 0.85,
       "roe": 0.0984,
       "dividendRate": 0.0496
     },
     "zz1000": {
       "name": "中证1000",
       "code": "000852",
-      "currentPB": 2.39,
-      "roe": 0.055,
+      "currentPB": 2.34,
+      "roe": 0.0549,
       "dividendRate": 0.0099
     },
     "zzxf": {
       "name": "主要消费",
       "code": "000932",
-      "currentPB": 3.43,
+      "currentPB": 3.4,
       "roe": 0.1482,
       "dividendRate": 0.0349
     },
@@ -414,15 +414,15 @@
     "zzyl": {
       "name": "中证医疗",
       "code": "399989",
-      "currentPB": 3.44,
+      "currentPB": 3.38,
       "roe": 0.1163,
       "dividendRate": 0.0084
     },
     "zzbj": {
       "name": "中证白酒",
       "code": "399997",
-      "currentPB": 4.0,
-      "roe": 0.2007,
+      "currentPB": 3.96,
+      "roe": 0.2008,
       "dividendRate": 0.0395
     }
   }
