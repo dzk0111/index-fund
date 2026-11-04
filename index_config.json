@@ -1,43 +1,8 @@
 {
-  "update_date": "2026-11-03",
+  "update_date": "2026-11-04",
   "description": "指数基金辅助工具手动配置数据",
   "admin_password_hash": "",
   "change_history": [
-    {
-      "date": "2026-10-30",
-      "index_name": "上证50",
-      "field": "roe",
-      "old_value": "0.1161",
-      "new_value": "0.1128"
-    },
-    {
-      "date": "2026-10-30",
-      "index_name": "科创50",
-      "field": "currentPB",
-      "old_value": "6.15",
-      "new_value": "5.87"
-    },
-    {
-      "date": "2026-10-30",
-      "index_name": "科创50",
-      "field": "roe",
-      "old_value": "0.0584",
-      "new_value": "0.0603"
-    },
-    {
-      "date": "2026-10-30",
-      "index_name": "中证红利",
-      "field": "currentPB",
-      "old_value": "0.9",
-      "new_value": "0.92"
-    },
-    {
-      "date": "2026-10-30",
-      "index_name": "中证红利",
-      "field": "roe",
-      "old_value": "0.0993",
-      "new_value": "0.0973"
-    },
     {
       "date": "2026-10-30",
       "index_name": "中证1000",
@@ -352,6 +317,41 @@
       "field": "roe",
       "old_value": "0.1926",
       "new_value": "0.1875"
+    },
+    {
+      "date": "2026-11-04",
+      "index_name": "中证500",
+      "field": "currentPB",
+      "old_value": "1.99",
+      "new_value": "1.96"
+    },
+    {
+      "date": "2026-11-04",
+      "index_name": "科创50",
+      "field": "currentPB",
+      "old_value": "5.71",
+      "new_value": "5.5"
+    },
+    {
+      "date": "2026-11-04",
+      "index_name": "中证1000",
+      "field": "currentPB",
+      "old_value": "1.98",
+      "new_value": "1.95"
+    },
+    {
+      "date": "2026-11-04",
+      "index_name": "主要消费",
+      "field": "currentPB",
+      "old_value": "3.55",
+      "new_value": "3.64"
+    },
+    {
+      "date": "2026-11-04",
+      "index_name": "中证白酒",
+      "field": "currentPB",
+      "old_value": "4.26",
+      "new_value": "4.36"
     }
   ],
   "indices": {
@@ -365,7 +365,7 @@
     "zz500": {
       "name": "中证500",
       "code": "000905",
-      "currentPB": 1.99,
+      "currentPB": 1.96,
       "roe": 0.0727,
       "dividendRate": 0.0118
     },
@@ -379,7 +379,7 @@
     "kc50": {
       "name": "科创50",
       "code": "000688",
-      "currentPB": 5.71,
+      "currentPB": 5.5,
       "roe": 0.0642,
       "dividendRate": 0.0043
     },
@@ -393,14 +393,14 @@
     "zz1000": {
       "name": "中证1000",
       "code": "000852",
-      "currentPB": 1.98,
+      "currentPB": 1.95,
       "roe": 0.0525,
       "dividendRate": 0.0099
     },
     "zzxf": {
       "name": "主要消费",
       "code": "000932",
-      "currentPB": 3.55,
+      "currentPB": 3.64,
       "roe": 0.1309,
       "dividendRate": 0.0349
     },
@@ -421,7 +421,7 @@
     "zzbj": {
       "name": "中证白酒",
       "code": "399997",
-      "currentPB": 4.26,
+      "currentPB": 4.36,
       "roe": 0.1875,
       "dividendRate": 0.0395
     }
